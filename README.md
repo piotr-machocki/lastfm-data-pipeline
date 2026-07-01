@@ -1,2 +1,42 @@
-# lastfm-data-pipeline
-End-to-end data pipeline using Last.fm API to collect, process, and analyze music listening data.
+# Last.fm Data Pipeline
+
+## Overview
+This is a simple Data Engineering project that ingests listening data from the Last.fm API, processes it, and loads it into a database for analytics.
+
+## Goal
+To build an end-to-end ETL pipeline and learn core Data Engineering concepts:
+- API data extraction
+- Data transformation with Python
+- Loading data into a database
+- Basic analytics with SQL
+
+## Data Source
+- Last.fm API (user scrobbles / recent tracks)
+
+## Architecture
+Extract → Transform → Load → Analytics
+
+## Tech Stack
+- Python
+- Last.fm API
+- PostgreSQL
+- pandas
+
+## Project Structure (planned)
+src/
+  extract.py
+  transform.py
+  load.py
+
+data/
+  raw/
+  processed/
+
+## Features (WIP)
+- Extract listening history from Last.fm
+- Clean and normalize data
+- Store in PostgreSQL
+- Run SQL queries for insights (top artists, tracks, listening trends)
+
+## Status
+🚧 In progress (first version)
