@@ -22,15 +22,18 @@ Extract → Transform → Load → Analytics
 - PostgreSQL
 - pandas
 
-## Project Structure (planned)
+## Project Structure
+
+```text
 src/
-  extract.py
-  transform.py
-  load.py
+├── extract.py      # Extract data from Last.fm API
+├── transform.py    # Clean and transform data
+└── load.py         # Load data into PostgreSQL
 
 data/
-  raw/
-  processed/
+├── raw/            # Raw API responses
+└── processed/      # Cleaned datasets
+```
 
 ## Features (WIP)
 - Extract listening history from Last.fm
