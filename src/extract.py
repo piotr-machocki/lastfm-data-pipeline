@@ -38,6 +38,8 @@ def fetch_scrobbles():
 
     response = requests.get(API_URL, params=params)
 
+    response.raise_for_status()
+
     data = response.json()
 
     with open("data/raw/scrobbles.json", "w", encoding="utf-8") as file:
