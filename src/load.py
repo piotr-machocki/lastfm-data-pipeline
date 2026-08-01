@@ -54,7 +54,8 @@ def load_scrobbles() -> None:
                         artist TEXT,
                         track TEXT,
                         album TEXT,
-                        timestamp TIMESTAMP
+                        timestamp TIMESTAMP,
+                        UNIQUE (artist, track, timestamp)
                     );
                 """)
 
@@ -62,6 +63,7 @@ def load_scrobbles() -> None:
                     """
                     INSERT INTO scrobbles (artist, track, album, timestamp)
                     VALUES (%s, %s, %s, %s);
+                    ON CONFLICT (artist, track, timestamp) DO NOTHING;
                     """,
                     records,
                 )
