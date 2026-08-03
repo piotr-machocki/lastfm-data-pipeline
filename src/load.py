@@ -13,31 +13,33 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-CSV_PATH = "data/processed/scrobbles.csv"
+if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
+    print("Missing required DB environment variables. Check your .env file.", file=sys.stderr)
+    sys.exit(1)
+
+CSV_PATH = "data/processed/validated_scrobbles.csv"
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 
 def load_scrobbles() -> None:
-    df = pd.read_csv(CSV_PATH)
-
-    df = df.where(pd.notnull(df), None)
+    try:
+        df = pd.read_csv(CSV_PATH)
+    except FileNotFoundError:
+        print(f"Input file not found: {CSV_PATH}", file=sys.stderr)
+        raise SystemExit(1)
 
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(f"scrobbles.csv is missing required columns: {missing}")
+        print(
+            f"{CSV_PATH} is missing required columns: {missing}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
 
-    df["timestamp"] = pd.to_datetime(
-        df["timestamp"],
-        errors="coerce"
-    )
+    df = df[["artist", "track", "album", "timestamp"]]
+    df = df.astype(object).where(df.notna(), None)
 
-    if df["timestamp"].isna().any():
-        raise ValueError("Invalid timestamps found")
-
-    records = list(
-        df[["artist", "track", "album", "timestamp"]]
-        .itertuples(index=False, name=None)
-    )
+    records = list(df.itertuples(index=False, name=None))
 
     try:
         with psycopg.connect(
@@ -51,10 +53,10 @@ def load_scrobbles() -> None:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS scrobbles (
                         id SERIAL PRIMARY KEY,
-                        artist TEXT,
-                        track TEXT,
+                        artist TEXT NOT NULL,
+                        track TEXT NOT NULL,
                         album TEXT,
-                        timestamp TIMESTAMP,
+                        timestamp TIMESTAMP NOT NULL,
                         UNIQUE (artist, track, timestamp)
                     );
                 """)
@@ -62,17 +64,26 @@ def load_scrobbles() -> None:
                 cursor.executemany(
                     """
                     INSERT INTO scrobbles (artist, track, album, timestamp)
-                    VALUES (%s, %s, %s, %s);
-                    ON CONFLICT (artist, track, timestamp) DO NOTHING;
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (artist, track, timestamp) DO NOTHING
+                    RETURNING id;
                     """,
                     records,
+                    returning=True,
                 )
+
+                inserted = 0
+                while True:
+                    inserted += len(cursor.fetchall())
+                    if not cursor.nextset():
+                        break
+
+            skipped = len(records) - inserted
+            print(f"Inserted {inserted} scrobbles, skipped {skipped} duplicates.")
 
     except psycopg.Error as e:
         print(f"Database error while loading scrobbles: {e}", file=sys.stderr)
         raise SystemExit(1)
-
-    print(f"Loaded {len(records)} scrobbles successfully!")
 
 
 if __name__ == "__main__":
