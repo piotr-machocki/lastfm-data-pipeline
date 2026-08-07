@@ -15,7 +15,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
     print("Missing required DB environment variables. Check your .env file.", file=sys.stderr)
-    sys.exit(1)
+    raise SystemExit(1)
 
 CSV_PATH = "data/processed/validated_scrobbles.csv"
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
