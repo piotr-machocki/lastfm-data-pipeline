@@ -41,6 +41,10 @@ def load_scrobbles() -> None:
 
     records = list(df.itertuples(index=False, name=None))
 
+    if not records:
+        print("No records to insert.")
+        return
+
     try:
         with psycopg.connect(
             host=DB_HOST,
