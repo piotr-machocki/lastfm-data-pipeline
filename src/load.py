@@ -56,7 +56,7 @@ def load_scrobbles() -> None:
             with conn.cursor() as cursor:
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS scrobbles (
-                        id SERIAL PRIMARY KEY,
+                        id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                         artist TEXT NOT NULL,
                         track TEXT NOT NULL,
                         album TEXT,
