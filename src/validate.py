@@ -5,31 +5,35 @@ REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 def validate_scrobbles(df):
     missing = REQUIRED_COLUMNS - set(df.columns)
+
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
-    
+
     df = df.reset_index(drop=True)
 
     rejected = []
 
     # Check missing artist
     missing_artist = (
-    df["artist"].fillna("").astype(str).str.strip().eq("")
-)
+        df["artist"].fillna("").astype(str).str.strip().eq("")
+    )
 
     for index in df[missing_artist].index:
         rejected.append((index, "Missing artist"))
 
     # Check missing track
     missing_track = (
-    df["track"].fillna("").astype(str).str.strip().eq("")
-)
+        df["track"].fillna("").astype(str).str.strip().eq("")
+    )
 
     for index in df[missing_track].index:
         rejected.append((index, "Missing track"))
 
     # Check invalid timestamp
-    parsed_timestamp = pd.to_datetime(df["timestamp"], errors="coerce")
+    parsed_timestamp = pd.to_datetime(
+        df["timestamp"],
+        errors="coerce"
+    )
     invalid_timestamp = parsed_timestamp.isna()
 
     for index in df[invalid_timestamp].index:
@@ -40,7 +44,6 @@ def validate_scrobbles(df):
 
     for index in df[future_timestamp & ~invalid_timestamp].index:
         rejected.append((index, "Future timestamp"))
-
 
     # Create rejected dataframe
     rejected_indexes = set(index for index, reason in rejected)
@@ -57,10 +60,8 @@ def validate_scrobbles(df):
 
     rejected_df["rejection_reason"] = rejected_df.index.map(reasons)
 
-
     # Valid rows = everything not rejected
     valid_df = df.drop(index=rejected_indexes).copy()
-
 
     return valid_df, rejected_df
 
