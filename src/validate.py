@@ -14,8 +14,7 @@ def validate_scrobbles(df):
 
     # Check missing artist
     missing_artist = (
-    df["artist"].isna()
-    | df["artist"].fillna("").astype(str).str.strip().eq("")
+    df["artist"].fillna("").astype(str).str.strip().eq("")
 )
 
     for index in df[missing_artist].index:
@@ -23,8 +22,7 @@ def validate_scrobbles(df):
 
     # Check missing track
     missing_track = (
-    df["track"].isna()
-    | df["track"].fillna("").astype(str).str.strip().eq("")
+    df["track"].fillna("").astype(str).str.strip().eq("")
 )
 
     for index in df[missing_track].index:
