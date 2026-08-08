@@ -15,7 +15,7 @@ def validate_scrobbles(df):
     # Check missing artist
     missing_artist = (
     df["artist"].isna()
-    | df["artist"].str.strip().eq("")
+    | df["artist"].fillna("").astype(str).str.strip().eq("")
 )
 
     for index in df[missing_artist].index:
@@ -24,7 +24,7 @@ def validate_scrobbles(df):
     # Check missing track
     missing_track = (
     df["track"].isna()
-    | df["track"].str.strip().eq("")
+    | df["track"].fillna("").astype(str).str.strip().eq("")
 )
 
     for index in df[missing_track].index:
@@ -71,7 +71,10 @@ if __name__ == "__main__":
     try:
         df = pd.read_csv("data/processed/scrobbles.csv")
     except FileNotFoundError:
-        print("Input file not found: data/processed/scrobbles.csv", file=sys.stderr)
+        print(
+            "Input file not found: data/processed/scrobbles.csv",
+            file=sys.stderr
+        )
         raise SystemExit(1)
 
     valid, rejected = validate_scrobbles(df)
