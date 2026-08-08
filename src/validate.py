@@ -61,7 +61,7 @@ def validate_scrobbles(df):
 
 
     # Valid rows = everything not rejected
-    valid_df = df.drop(index=rejected_indexes)
+    valid_df = df.drop(index=rejected_indexes).copy()
 
 
     return valid_df, rejected_df
