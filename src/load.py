@@ -69,14 +69,20 @@ def load_scrobbles() -> None:
                     """
                     INSERT INTO scrobbles (artist, track, album, timestamp)
                     VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (artist, track, timestamp) DO NOTHING;
+                    ON CONFLICT (artist, track, timestamp) DO NOTHING
+                    RETURNING id;
                     """,
-                    records
+                    records,
+                    returning=True
                 )
 
-                inserted = cursor.rowcount
-                skipped = len(records) - inserted
+                inserted = 0
+                while True:
+                    inserted += len(cursor.fetchall())
+                    if not cursor.nextset():
+                        break
 
+                skipped = len(records) - inserted
                 print(f"Inserted {inserted} scrobbles, skipped {skipped} duplicates.")
 
     except psycopg.Error as e:
