@@ -6,7 +6,7 @@ REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 def validate_scrobbles(df):
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        raise ValueError(f"scrobbles.csv is missing required columns: {missing}")
+        raise ValueError(f"Missing required columns: {missing}")
     
     df = df.reset_index(drop=True)
 
