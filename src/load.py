@@ -5,6 +5,8 @@ import pandas as pd
 import psycopg
 from dotenv import load_dotenv
 
+from config import VALIDATED_CSV
+
 load_dotenv()
 
 DB_HOST = os.getenv("DB_HOST")
@@ -17,21 +19,20 @@ if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
     print("Missing required DB environment variables. Check your .env file.", file=sys.stderr)
     raise SystemExit(1)
 
-CSV_PATH = "data/processed/validated_scrobbles.csv"
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 
 def load_scrobbles() -> None:
     try:
-        df = pd.read_csv(CSV_PATH)
+        df = pd.read_csv(VALIDATED_CSV)
     except FileNotFoundError:
-        print(f"Input file not found: {CSV_PATH}", file=sys.stderr)
+        print(f"Input file not found: {VALIDATED_CSV}", file=sys.stderr)
         raise SystemExit(1)
 
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         print(
-            f"{CSV_PATH} is missing required columns: {missing}",
+            f"{VALIDATED_CSV} is missing required columns: {missing}",
             file=sys.stderr,
         )
         raise SystemExit(1)

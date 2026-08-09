@@ -3,6 +3,7 @@ import requests
 import json
 import hashlib
 from dotenv import load_dotenv
+from config import SCROBBLES_JSON
 
 
 load_dotenv()
@@ -42,7 +43,7 @@ def fetch_scrobbles():
 
     data = response.json()
 
-    with open("data/raw/scrobbles.json", "w", encoding="utf-8") as file:
+    with open(SCROBBLES_JSON, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
     print("Scrobbles saved!")

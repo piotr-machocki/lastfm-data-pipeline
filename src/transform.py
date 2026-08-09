@@ -1,10 +1,11 @@
 import json
 import pandas as pd
 from datetime import datetime
+from config import SCROBBLES_JSON, SCROBBLES_CSV
 
 
 def transform_scrobbles():
-    with open("data/raw/scrobbles.json", "r", encoding="utf-8") as file:
+    with open(SCROBBLES_JSON, "r", encoding="utf-8") as file:
         data = json.load(file)
 
     tracks = data["recenttracks"]["track"]
@@ -30,7 +31,7 @@ def transform_scrobbles():
     df = pd.DataFrame(clean_tracks)
 
     df.to_csv(
-        "data/processed/scrobbles.csv",
+        SCROBBLES_CSV,
         index=False,
         encoding="utf-8"
     )

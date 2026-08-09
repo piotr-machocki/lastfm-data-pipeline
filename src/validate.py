@@ -1,5 +1,6 @@
 import pandas as pd
 import sys
+from config import SCROBBLES_CSV, VALIDATED_CSV, REJECTED_CSV
 
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
@@ -68,10 +69,10 @@ def validate_scrobbles(df):
 
 if __name__ == "__main__":
     try:
-        df = pd.read_csv("data/processed/scrobbles.csv")
+        df = pd.read_csv(SCROBBLES_CSV)
     except FileNotFoundError:
         print(
-            "Input file not found: data/processed/scrobbles.csv",
+            f"Input file not found: {SCROBBLES_CSV}",
             file=sys.stderr
         )
         raise SystemExit(1)
@@ -83,12 +84,12 @@ if __name__ == "__main__":
     print(f"Rejected rows: {len(rejected)}")
 
     valid.to_csv(
-        "data/processed/validated_scrobbles.csv",
+        VALIDATED_CSV,
         index=False
     )
 
     rejected.to_csv(
-        "data/processed/rejected_scrobbles.csv",
+        REJECTED_CSV,
         index=False
     )
     
