@@ -9,6 +9,9 @@ def transform_scrobbles():
         data = json.load(file)
 
     tracks = data["recenttracks"]["track"]
+    
+    if isinstance(tracks, dict):
+        tracks = [tracks]
 
     clean_tracks = []
 
