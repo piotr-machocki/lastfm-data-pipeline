@@ -24,7 +24,10 @@ def transform_scrobbles():
             "artist": track["artist"]["#text"],
             "album": track["album"]["#text"],
             "track": track["name"],
-            "timestamp": datetime.fromtimestamp(int(track["date"]["uts"]))
+            "timestamp": datetime.fromtimestamp(
+    int(track["date"]["uts"]),
+    tz=timezone.utc,
+)
     
         }
 
