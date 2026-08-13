@@ -1,6 +1,6 @@
 import json
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 from config import SCROBBLES_JSON, SCROBBLES_CSV
 
 
@@ -24,9 +24,8 @@ def transform_scrobbles():
             "artist": track["artist"]["#text"],
             "album": track["album"]["#text"],
             "track": track["name"],
-            "timestamp": datetime.fromtimestamp(
-        int(track["date"]["uts"])
-    )
+            "timestamp": datetime.fromtimestamp(int(track["date"]["uts"]))
+    
         }
 
         clean_tracks.append(clean_track)
