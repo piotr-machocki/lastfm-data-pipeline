@@ -61,7 +61,7 @@ def load_scrobbles() -> None:
                         artist TEXT NOT NULL,
                         track TEXT NOT NULL,
                         album TEXT,
-                        timestamp TIMESTAMP NOT NULL,
+                        timestamp TIMESTAMPTZ NOT NULL,
                         UNIQUE (artist, track, timestamp)
                     );
                 """)
