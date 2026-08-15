@@ -17,31 +17,41 @@ API_URL = "https://ws.audioscrobbler.com/2.0/"
 
 def fetch_scrobbles():
     signature_string = (
-    f"api_key{API_KEY}"
-    f"methoduser.getrecenttracks"
-    f"sk{SESSION_KEY}"
-    f"user{USERNAME}"
-    f"{API_SECRET}"
-)
+        f"api_key{API_KEY}"
+        f"methoduser.getrecenttracks"
+        f"sk{SESSION_KEY}"
+        f"user{USERNAME}"
+        f"{API_SECRET}"
+    )
 
     api_sig = hashlib.md5(
         signature_string.encode("utf-8")
     ).hexdigest()
 
     params = {
-    "method": "user.getrecenttracks",
-    "user": USERNAME,
-    "api_key": API_KEY,
-    "sk": SESSION_KEY,
-    "api_sig": api_sig,
-    "format": "json"
-}
+        "method": "user.getrecenttracks",
+        "user": USERNAME,
+        "api_key": API_KEY,
+        "sk": SESSION_KEY,
+        "api_sig": api_sig,
+        "format": "json"
+    }
 
     response = requests.get(API_URL, params=params)
-
     response.raise_for_status()
 
     data = response.json()
+
+    if "error" in data:
+        raise RuntimeError(
+            f"Last.fm API error {data['error']}: "
+            f"{data.get('message', 'Unknown error')}"
+        )
+
+    if "recenttracks" not in data:
+        raise RuntimeError(
+            "Last.fm API response is missing 'recenttracks'."
+        )
 
     with open(SCROBBLES_JSON, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
