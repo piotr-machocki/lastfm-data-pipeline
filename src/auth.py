@@ -9,7 +9,6 @@ load_dotenv()
 
 API_KEY = os.getenv("LASTFM_API_KEY")
 API_SECRET = os.getenv("LASTFM_API_SECRET")
-USERNAME = os.getenv("LASTFM_USERNAME")
 
 API_URL = "https://ws.audioscrobbler.com/2.0/"
 
@@ -86,11 +85,15 @@ def get_session(token):
     params["api_sig"] = api_sig
 
     response = requests.get(API_URL, params=params)
+    response.raise_for_status()
 
     data = response.json()
 
-    print("\nSession response:")
-    print(data)
+    if "error" in data:
+        raise RuntimeError(
+            f"Last.fm API error {data['error']}: "
+            f"{data.get('message', 'Unknown error')}"
+        )
 
     session_key = data["session"]["key"]
 
