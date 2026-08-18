@@ -41,7 +41,7 @@ def validate_scrobbles(df):
         rejected.append((index, "Invalid timestamp"))
 
     # Check future timestamp
-    future_timestamp = parsed_timestamp > pd.Timestamp.now()
+    future_timestamp = parsed_timestamp > pd.Timestamp.now(tz="UTC")
 
     for index in df[future_timestamp & ~invalid_timestamp].index:
         rejected.append((index, "Future timestamp"))
