@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import json
 import hashlib
@@ -37,21 +38,29 @@ def fetch_scrobbles():
         "format": "json"
     }
 
-    response = requests.get(API_URL, params=params)
-    response.raise_for_status()
+    try:
+        response = requests.get(API_URL, params=params)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Request to Last.fm API failed: {e}", file=sys.stderr)
+        raise SystemExit(1)
 
     data = response.json()
 
     if "error" in data:
-        raise RuntimeError(
+        print(
             f"Last.fm API error {data['error']}: "
-            f"{data.get('message', 'Unknown error')}"
+            f"{data.get('message', 'Unknown error')}",
+            file=sys.stderr
         )
+        raise SystemExit(1)
 
     if "recenttracks" not in data:
-        raise RuntimeError(
-            "Last.fm API response is missing 'recenttracks'."
+        print(
+            "Last.fm API response is missing 'recenttracks'.",
+            file=sys.stderr
         )
+        raise SystemExit(1)
 
     with open(SCROBBLES_JSON, "w", encoding="utf-8") as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
