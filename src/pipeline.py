@@ -4,6 +4,7 @@ from validate import validate_scrobbles
 from load import load_scrobbles
 
 import pandas as pd
+import sys
 
 from config import (
     RAW_DIR,
@@ -26,7 +27,15 @@ def run_pipeline():
 
     print("[3/4] Validating...")
 
-    df = pd.read_csv(SCROBBLES_CSV)
+    try:
+        df = pd.read_csv(SCROBBLES_CSV)
+    except FileNotFoundError:
+        print(
+            f"Input file not found: {SCROBBLES_CSV}",
+            file=sys.stderr
+        )
+        raise SystemExit(1)
+    
     valid, rejected = validate_scrobbles(df)
 
     valid.to_csv(
