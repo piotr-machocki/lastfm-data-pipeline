@@ -1,7 +1,7 @@
 import os
 import requests
 import hashlib
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 from pathlib import Path
 
 
@@ -42,23 +42,13 @@ def get_token():
 
 def save_session_key(session_key):
     env_path = Path(".env")
+    env_path.touch(exist_ok=True)
 
-    lines = []
-
-    if env_path.exists():
-        lines = env_path.read_text().splitlines()
-
-    updated = False
-
-    for i, line in enumerate(lines):
-        if line.startswith("LASTFM_SESSION_KEY="):
-            lines[i] = f"LASTFM_SESSION_KEY={session_key}"
-            updated = True
-
-    if not updated:
-        lines.append(f"LASTFM_SESSION_KEY={session_key}")
-
-    env_path.write_text("\n".join(lines) + "\n")
+    set_key(
+        dotenv_path=env_path,
+        key_to_set="LASTFM_SESSION_KEY",
+        value_to_set=session_key,
+    )
 
     print("Session key saved to .env")
 
