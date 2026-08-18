@@ -33,7 +33,8 @@ def validate_scrobbles(df):
     # Check invalid timestamp
     parsed_timestamp = pd.to_datetime(
         df["timestamp"],
-        errors="coerce"
+        errors="coerce",
+        utc=True
     )
     invalid_timestamp = parsed_timestamp.isna()
 
