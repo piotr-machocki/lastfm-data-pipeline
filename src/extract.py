@@ -2,9 +2,9 @@ import os
 import sys
 import requests
 import json
-import hashlib
 from dotenv import load_dotenv
 from config import SCROBBLES_JSON, RAW_DIR
+from lastfm import sign_request
 
 
 load_dotenv()
@@ -22,17 +22,6 @@ if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
     )
     raise SystemExit(1)
 
-def generate_api_sig(params):
-    signature_string = "".join(
-        f"{key}{params[key]}"
-        for key in sorted(params)
-    )
-
-    signature_string += API_SECRET
-
-    return hashlib.md5(
-        signature_string.encode("utf-8")
-    ).hexdigest()
 
 def fetch_scrobbles():
     params = {
@@ -44,11 +33,16 @@ def fetch_scrobbles():
         "limit": 200,
     }
 
-    params["api_sig"] = generate_api_sig({
-        key: value
-        for key, value in params.items()
-        if key != "format"
-    })
+    api_sig = sign_request(
+        {
+            key: value
+            for key, value in params.items()
+            if key != "format"
+        },
+        API_SECRET,
+    )
+
+    params["api_sig"] = api_sig
 
     try:
         response = requests.get(API_URL, params=params)
