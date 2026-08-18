@@ -22,8 +22,14 @@ def get_token():
     }
 
     response = requests.get(API_URL, params=params)
-
+    response.raise_for_status()
     data = response.json()
+
+    if "error" in data:
+        raise RuntimeError(
+            f"Last.fm API error {data['error']}: "
+            f"{data.get('message', 'Unknown error')}"
+        )
 
     token = data["token"]
 
