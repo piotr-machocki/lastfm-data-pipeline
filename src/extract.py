@@ -22,28 +22,33 @@ if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
     )
     raise SystemExit(1)
 
-
-def fetch_scrobbles():
-    signature_string = (
-        f"api_key{API_KEY}"
-        f"methoduser.getrecenttracks"
-        f"sk{SESSION_KEY}"
-        f"user{USERNAME}"
-        f"{API_SECRET}"
+def generate_api_sig(params):
+    signature_string = "".join(
+        f"{key}{params[key]}"
+        for key in sorted(params)
     )
 
-    api_sig = hashlib.md5(
+    signature_string += API_SECRET
+
+    return hashlib.md5(
         signature_string.encode("utf-8")
     ).hexdigest()
 
+def fetch_scrobbles():
     params = {
         "method": "user.getrecenttracks",
         "user": USERNAME,
         "api_key": API_KEY,
         "sk": SESSION_KEY,
-        "api_sig": api_sig,
-        "format": "json"
+        "format": "json",
+        "limit": 200,
     }
+
+    params["api_sig"] = generate_api_sig({
+        key: value
+        for key, value in params.items()
+        if key != "format"
+    })
 
     try:
         response = requests.get(API_URL, params=params)
