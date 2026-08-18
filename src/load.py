@@ -66,22 +66,19 @@ def load_scrobbles() -> None:
                     );
                 """)
 
-                cursor.executemany(
-                    """
-                    INSERT INTO scrobbles (artist, track, album, timestamp)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (artist, track, timestamp) DO NOTHING
-                    RETURNING id;
-                    """,
-                    records,
-                    returning=True
-                )
-
                 inserted = 0
-                while True:
-                    inserted += len(cursor.fetchall())
-                    if not cursor.nextset():
-                        break
+
+                for record in records:
+                    cursor.execute(
+                        """
+                        INSERT INTO scrobbles (artist, track, album, timestamp)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (artist, track, timestamp) DO NOTHING
+                        """,
+                        record,
+                    )
+
+                    inserted += cursor.rowcount
 
                 skipped = len(records) - inserted
                 print(f"Inserted {inserted} scrobbles, skipped {skipped} duplicates.")
