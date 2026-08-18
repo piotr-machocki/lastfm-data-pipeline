@@ -15,6 +15,13 @@ USERNAME = os.getenv("LASTFM_USERNAME")
 SESSION_KEY = os.getenv("LASTFM_SESSION_KEY")
 API_URL = "https://ws.audioscrobbler.com/2.0/"
 
+if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
+    print(
+        "Missing required Last.fm env vars. Run auth.py first.",
+        file=sys.stderr
+    )
+    raise SystemExit(1)
+
 
 def fetch_scrobbles():
     signature_string = (
