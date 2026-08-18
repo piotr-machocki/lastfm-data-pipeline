@@ -4,7 +4,7 @@ import requests
 import json
 import hashlib
 from dotenv import load_dotenv
-from config import SCROBBLES_JSON
+from config import SCROBBLES_JSON, RAW_DIR
 
 
 load_dotenv()
@@ -76,4 +76,5 @@ def fetch_scrobbles():
 
 
 if __name__ == "__main__":
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
     fetch_scrobbles()
