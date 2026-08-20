@@ -1,25 +1,29 @@
 import json
-import sys
 import pandas as pd
+import logging
 from datetime import datetime, timezone
 from config import SCROBBLES_JSON, SCROBBLES_CSV
 
 
+logger = logging.getLogger(__name__)
+
 def transform_scrobbles():
+    logger.info("Transforming scrobbles")
+
     try:
         with open(SCROBBLES_JSON, "r", encoding="utf-8") as file:
             data = json.load(file)
     except FileNotFoundError:
-        print(f"Input file not found: {SCROBBLES_JSON}", file=sys.stderr)
+        logger.error("Input file not found: %s", SCROBBLES_JSON)
         raise SystemExit(1)
     except json.JSONDecodeError as e:
-        print(f"Malformed JSON in {SCROBBLES_JSON}: {e}", file=sys.stderr)
+        logger.error("Malformed JSON in %s: %s", SCROBBLES_JSON, e)
         raise SystemExit(1)
 
     try:
         tracks = data["recenttracks"]["track"]
     except KeyError:
-        print(f"{SCROBBLES_JSON} is missing 'recenttracks.track'.", file=sys.stderr)
+        logger.error("%s is missing 'recenttracks.track'.", SCROBBLES_JSON)
         raise SystemExit(1)
 
     if isinstance(tracks, dict):
@@ -42,7 +46,7 @@ def transform_scrobbles():
                 )
             }
         except (KeyError, TypeError, ValueError) as e:
-            print(f"Skipping malformed track record: {e}", file=sys.stderr)
+            logger.warning("Skipping malformed track record: %s", e)
             continue
 
         clean_tracks.append(clean_track)
@@ -55,8 +59,10 @@ def transform_scrobbles():
         encoding="utf-8"
     )
 
-    print(f"Saved {len(df)} transformed tracks")
+    logger.info("Saved %d transformed tracks", len(df))
 
 
 if __name__ == "__main__":
+    from config import setup_logging
+    setup_logging()
     transform_scrobbles()

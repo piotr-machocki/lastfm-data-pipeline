@@ -1,10 +1,12 @@
 import os
 import requests
-import hashlib
+import logging
 from dotenv import load_dotenv, set_key
 from pathlib import Path
+from lastfm import sign_request
 
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 API_KEY = os.getenv("LASTFM_API_KEY")
@@ -14,6 +16,8 @@ API_URL = "https://ws.audioscrobbler.com/2.0/"
 
 
 def get_token():
+    logger.info("Requesting Last.fm authentication token")
+
     params = {
         "method": "auth.getToken",
         "api_key": API_KEY,
@@ -50,10 +54,12 @@ def save_session_key(session_key):
         value_to_set=session_key,
     )
 
-    print("Session key saved to .env")
+    logger.info("Session key saved to .env")
 
 
 def get_session(token):
+    logger.info("Requesting Last.fm session key")
+
     params = {
         "method": "auth.getSession",
         "api_key": API_KEY,
@@ -61,17 +67,7 @@ def get_session(token):
         "format": "json"
     }
 
-    signature_string = (
-        f"api_key{API_KEY}"
-        f"methodauth.getSession"
-        f"token{token}"
-        f"{API_SECRET}"
-    )
-
-    api_sig = hashlib.md5(
-        signature_string.encode("utf-8")
-    ).hexdigest()
-
+    api_sig = sign_request(params, API_SECRET)
     params["api_sig"] = api_sig
 
     response = requests.get(API_URL, params=params)
@@ -91,6 +87,8 @@ def get_session(token):
 
 
 if __name__ == "__main__":
+    from config import setup_logging
+    setup_logging()
     token = get_token()
 
     input(

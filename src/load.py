@@ -1,11 +1,13 @@
 import os
-import sys
+import logging
 
 import pandas as pd
 import psycopg
 from dotenv import load_dotenv
 
 from config import VALIDATED_CSV
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -16,24 +18,27 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
-    print("Missing required DB environment variables. Check your .env file.", file=sys.stderr)
+    logger.error("Missing required DB environment variables. Check your .env file.")
     raise SystemExit(1)
 
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 
 def load_scrobbles() -> None:
+    logger.info("Loading scrobbles into PostgreSQL")
+
     try:
         df = pd.read_csv(VALIDATED_CSV)
     except FileNotFoundError:
-        print(f"Input file not found: {VALIDATED_CSV}", file=sys.stderr)
+        logger.error("Input file not found: %s", VALIDATED_CSV)
         raise SystemExit(1)
 
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
-        print(
-            f"{VALIDATED_CSV} is missing required columns: {missing}",
-            file=sys.stderr,
+        logger.error(
+            "%s is missing required columns: %s",
+            VALIDATED_CSV,
+            missing,
         )
         raise SystemExit(1)
 
@@ -43,7 +48,7 @@ def load_scrobbles() -> None:
     records = list(df.itertuples(index=False, name=None))
 
     if not records:
-        print("No records to insert.")
+        logger.info("No records to insert.")
         return
 
     try:
@@ -81,12 +86,19 @@ def load_scrobbles() -> None:
                     inserted += cursor.rowcount
 
                 skipped = len(records) - inserted
-                print(f"Inserted {inserted} scrobbles, skipped {skipped} duplicates.")
+                logger.info(
+                    "Inserted %d scrobbles, skipped %d duplicates.",
+                    inserted,
+                    skipped,
+                )
 
-    except psycopg.Error as e:
-        print(f"Database error while loading scrobbles: {e}", file=sys.stderr)
+    except psycopg.Error:
+        logger.exception("Database error while loading scrobbles")
         raise SystemExit(1)
 
 
 if __name__ == "__main__":
+    from config import setup_logging
+
+    setup_logging()
     load_scrobbles()

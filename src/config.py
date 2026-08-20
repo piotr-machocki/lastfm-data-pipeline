@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -10,3 +11,16 @@ SCROBBLES_JSON = RAW_DIR / "scrobbles.json"
 SCROBBLES_CSV = PROCESSED_DIR / "scrobbles.csv"
 VALIDATED_CSV = PROCESSED_DIR / "validated_scrobbles.csv"
 REJECTED_CSV = PROCESSED_DIR / "rejected_scrobbles.csv"
+
+
+def setup_logging(level=logging.INFO):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(DATA_DIR / "pipeline.log"),
+        ],
+    )

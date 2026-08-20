@@ -3,8 +3,8 @@ from transform import transform_scrobbles
 from validate import validate_scrobbles
 from load import load_scrobbles
 
+import logging
 import pandas as pd
-import sys
 
 from config import (
     RAW_DIR,
@@ -12,28 +12,28 @@ from config import (
     SCROBBLES_CSV,
     VALIDATED_CSV,
     REJECTED_CSV,
+    setup_logging,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def run_pipeline():
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("[1/4] Extracting...")
+    logger.info("[1/4] Extracting...")
     fetch_scrobbles()
 
-    print("[2/4] Transforming...")
+    logger.info("[2/4] Transforming...")
     transform_scrobbles()
 
-    print("[3/4] Validating...")
+    logger.info("[3/4] Validating...")
 
     try:
         df = pd.read_csv(SCROBBLES_CSV)
     except FileNotFoundError:
-        print(
-            f"Input file not found: {SCROBBLES_CSV}",
-            file=sys.stderr
-        )
+        logger.error("Input file not found: %s", SCROBBLES_CSV)
         raise SystemExit(1)
     
     valid, rejected = validate_scrobbles(df)
@@ -48,15 +48,16 @@ def run_pipeline():
         index=False
     )
 
-    print(f"Rows read: {len(df)}")
-    print(f"Valid rows: {len(valid)}")
-    print(f"Rejected rows: {len(rejected)}")
+    logger.info("Rows read: %d", len(df))
+    logger.info("Valid rows: %d", len(valid))
+    logger.info("Rejected rows: %d", len(rejected))
 
-    print("[4/4] Loading...")
+    logger.info("[4/4] Loading...")
     load_scrobbles()
 
-    print("\nPipeline completed successfully.")
+    logger.info("Pipeline completed successfully.")
 
 
 if __name__ == "__main__":
+    setup_logging()
     run_pipeline()

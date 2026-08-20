@@ -1,13 +1,18 @@
+import logging
 import pandas as pd
-import sys
 from config import SCROBBLES_CSV, VALIDATED_CSV, REJECTED_CSV
+
+logger = logging.getLogger(__name__)
 
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 def validate_scrobbles(df):
+    logger.info("Validating %d scrobbles", len(df))
+    
     missing = REQUIRED_COLUMNS - set(df.columns)
 
     if missing:
+        logger.error("Missing required columns: %s", missing)
         raise ValueError(f"Missing required columns: {missing}")
 
     df = df.reset_index(drop=True)
@@ -69,20 +74,20 @@ def validate_scrobbles(df):
 
 
 if __name__ == "__main__":
+    from config import setup_logging
+    setup_logging()
+
     try:
         df = pd.read_csv(SCROBBLES_CSV)
     except FileNotFoundError:
-        print(
-            f"Input file not found: {SCROBBLES_CSV}",
-            file=sys.stderr
-        )
+        logger.error("Input file not found: %s", SCROBBLES_CSV)
         raise SystemExit(1)
 
     valid, rejected = validate_scrobbles(df)
 
-    print(f"Rows read: {len(df)}")
-    print(f"Valid rows: {len(valid)}")
-    print(f"Rejected rows: {len(rejected)}")
+    logger.info("Rows read: %d", len(df))
+    logger.info("Valid rows: %d", len(valid))
+    logger.info("Rejected rows: %d", len(rejected))
 
     valid.to_csv(
         VALIDATED_CSV,
