@@ -3,8 +3,8 @@ import requests
 import json
 import logging
 from dotenv import load_dotenv
-from config import SCROBBLES_JSON, RAW_DIR
-from lastfm import sign_request
+from src.config import SCROBBLES_JSON, RAW_DIR
+from src.lastfm import sign_request
 
 
 logger = logging.getLogger(__name__)

@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import logging
 from datetime import datetime, timezone
-from config import SCROBBLES_JSON, SCROBBLES_CSV
+from src.config import SCROBBLES_JSON, SCROBBLES_CSV
 
 
 logger = logging.getLogger(__name__)

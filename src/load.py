@@ -5,7 +5,7 @@ import pandas as pd
 import psycopg
 from dotenv import load_dotenv
 
-from config import VALIDATED_CSV
+from src.config import VALIDATED_CSV
 
 logger = logging.getLogger(__name__)
 

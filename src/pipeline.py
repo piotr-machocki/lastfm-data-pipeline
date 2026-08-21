@@ -1,12 +1,12 @@
-from extract import fetch_scrobbles
-from transform import transform_scrobbles
-from validate import validate_scrobbles
-from load import load_scrobbles
+from src.extract import fetch_scrobbles
+from src.transform import transform_scrobbles
+from src.validate import validate_scrobbles
+from src.load import load_scrobbles
 
 import logging
 import pandas as pd
 
-from config import (
+from src.config import (
     RAW_DIR,
     PROCESSED_DIR,
     SCROBBLES_CSV,

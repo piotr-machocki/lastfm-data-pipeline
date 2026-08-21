@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from config import SCROBBLES_CSV, VALIDATED_CSV, REJECTED_CSV
+from src.config import SCROBBLES_CSV, VALIDATED_CSV, REJECTED_CSV
 
 logger = logging.getLogger(__name__)
 

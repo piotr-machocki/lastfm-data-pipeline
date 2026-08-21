@@ -3,7 +3,7 @@ import requests
 import logging
 from dotenv import load_dotenv, set_key
 from pathlib import Path
-from lastfm import sign_request
+from src.lastfm import sign_request
 
 
 logger = logging.getLogger(__name__)
