@@ -74,7 +74,7 @@ def validate_scrobbles(df):
 
 
 if __name__ == "__main__":
-    from config import setup_logging
+    from src.config import setup_logging
     setup_logging()
 
     try:

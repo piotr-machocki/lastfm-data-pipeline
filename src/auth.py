@@ -87,7 +87,7 @@ def get_session(token):
 
 
 if __name__ == "__main__":
-    from config import setup_logging
+    from src.config import setup_logging
     setup_logging()
     token = get_token()
 

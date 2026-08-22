@@ -22,58 +22,79 @@ if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
     raise SystemExit(1)
 
 
-def fetch_scrobbles():
+def fetch_scrobbles(since=None, full_history=False):
     logger.info("Fetching scrobbles from Last.fm")
 
-    params = {
-        "method": "user.getrecenttracks",
-        "user": USERNAME,
-        "api_key": API_KEY,
-        "sk": SESSION_KEY,
-        "format": "json",
-        "limit": 200,
-    }
+    all_tracks = []
+    page = 1
+    total_pages = 1
 
-    api_sig = sign_request(
-        {
-            key: value
-            for key, value in params.items()
-            if key != "format"
-        },
-        API_SECRET,
-    )
+    while page <= total_pages:
+        params = {
+            "method": "user.getrecenttracks",
+            "user": USERNAME,
+            "api_key": API_KEY,
+            "sk": SESSION_KEY,
+            "format": "json",
+            "limit": 200,
+            "page": page,
+        }
 
-    params["api_sig"] = api_sig
+        if since is not None:
+            params["from"] = since
 
-    try:
-        response = requests.get(API_URL, params=params)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        logger.error("Request to Last.fm API failed: %s", e)
-        raise SystemExit(1)
-
-    data = response.json()
-
-    if "error" in data:
-        logger.error(
-            "Last.fm API error %s: %s",
-            data["error"],
-            data.get("message", "Unknown error"),
+        api_sig = sign_request(
+            {key: value for key, value in params.items() if key != "format"},
+            API_SECRET,
         )
-        raise SystemExit(1)
+        params["api_sig"] = api_sig
 
-    if "recenttracks" not in data:
-        logger.error("Last.fm API response is missing 'recenttracks'.")
-        raise SystemExit(1)
+        try:
+            response = requests.get(API_URL, params=params)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logger.error("Request to Last.fm API failed: %s", e)
+            raise SystemExit(1)
+
+        data = response.json()
+
+        if "error" in data:
+            logger.error(
+                "Last.fm API error %s: %s",
+                data["error"],
+                data.get("message", "Unknown error"),
+            )
+            raise SystemExit(1)
+
+        if "recenttracks" not in data:
+            logger.error("Last.fm API response is missing 'recenttracks'.")
+            raise SystemExit(1)
+
+        recenttracks = data["recenttracks"]
+        tracks = recenttracks.get("track", [])
+
+        if isinstance(tracks, dict):
+            tracks = [tracks]
+
+        all_tracks.extend(tracks)
+
+        total_pages = int(recenttracks.get("@attr", {}).get("totalPages", 1))
+        logger.info("Fetched page %d/%d (%d tracks)", page, total_pages, len(tracks))
+
+        page += 1
+
+        if since is None and not full_history:
+            logger.info("No 'since' cursor and full_history=False — fetching newest page only")
+            break
 
     with open(SCROBBLES_JSON, "w", encoding="utf-8") as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
+        json.dump({"recenttracks": {"track": all_tracks}}, file, indent=4, ensure_ascii=False)
 
-    logger.info("Scrobbles saved!")
+    logger.info("Saved %d scrobbles total", len(all_tracks))
 
 
 if __name__ == "__main__":
-    from config import setup_logging
+    from src.config import setup_logging
     setup_logging()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     fetch_scrobbles()

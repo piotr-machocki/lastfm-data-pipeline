@@ -24,6 +24,33 @@ if not all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
 REQUIRED_COLUMNS = {"artist", "track", "album", "timestamp"}
 
 
+def get_last_timestamp():
+    logger.info("Checking for last scrobble timestamp in database")
+
+    try:
+        with psycopg.connect(
+            host=DB_HOST,
+            port=DB_PORT,
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+        ) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT MAX(timestamp) FROM scrobbles;")
+                result = cursor.fetchone()
+    except psycopg.Error:
+        logger.exception("Database error while checking last timestamp")
+        raise SystemExit(1)
+
+    if result is None or result[0] is None:
+        logger.info("No existing scrobbles found; fetching newest scrobbles only")
+        return None
+
+    since = int(result[0].timestamp()) + 1
+    logger.info("Last scrobble timestamp: %s (since=%d)", result[0], since)
+    return since
+
+
 def load_scrobbles() -> None:
     logger.info("Loading scrobbles into PostgreSQL")
 
@@ -98,7 +125,7 @@ def load_scrobbles() -> None:
 
 
 if __name__ == "__main__":
-    from config import setup_logging
+    from src.config import setup_logging
 
     setup_logging()
     load_scrobbles()

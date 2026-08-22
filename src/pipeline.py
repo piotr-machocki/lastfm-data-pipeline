@@ -1,9 +1,10 @@
 from src.extract import fetch_scrobbles
 from src.transform import transform_scrobbles
 from src.validate import validate_scrobbles
-from src.load import load_scrobbles
+from src.load import load_scrobbles, get_last_timestamp
 
 import logging
+import argparse
 import pandas as pd
 
 from src.config import (
@@ -18,12 +19,13 @@ from src.config import (
 logger = logging.getLogger(__name__)
 
 
-def run_pipeline():
+def run_pipeline(full_history=False):
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("[1/4] Extracting...")
-    fetch_scrobbles()
+    since = None if full_history else get_last_timestamp()
+    fetch_scrobbles(since=since, full_history=full_history)
 
     logger.info("[2/4] Transforming...")
     transform_scrobbles()
@@ -59,5 +61,13 @@ def run_pipeline():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--full-history",
+        action="store_true",
+        help="Fetch the complete scrobble history instead of only the newest scrobbles",
+    )
+    args = parser.parse_args()
+
     setup_logging()
-    run_pipeline()
+    run_pipeline(full_history=args.full_history)
