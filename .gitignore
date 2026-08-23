@@ -217,11 +217,17 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# Runtime data
 data/raw/*
 data/processed/*
+data/quarantine/*
+data/logs/*
 
+# Keep directory structure
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/quarantine/.gitkeep
+!data/logs/.gitkeep
 
 Todo
 all_code.txt

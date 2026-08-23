@@ -10,6 +10,7 @@ import pandas as pd
 from src.config import (
     RAW_DIR,
     PROCESSED_DIR,
+    QUARANTINE_DIR,
     SCROBBLES_CSV,
     VALIDATED_CSV,
     REJECTED_CSV,
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 def run_pipeline(full_history=False):
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    QUARANTINE_DIR.mkdir(parents=True, exist_ok=True)
 
     logger.info("[1/4] Extracting...")
     since = None if full_history else get_last_timestamp()
