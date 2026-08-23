@@ -87,16 +87,6 @@ def load_scrobbles() -> None:
             password=DB_PASSWORD,
         ) as conn:
             with conn.cursor() as cursor:
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS scrobbles (
-                        id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                        artist TEXT NOT NULL,
-                        track TEXT NOT NULL,
-                        album TEXT,
-                        timestamp TIMESTAMPTZ NOT NULL,
-                        UNIQUE (artist, track, timestamp)
-                    );
-                """)
 
                 cursor.executemany(
                     """
