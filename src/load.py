@@ -98,26 +98,16 @@ def load_scrobbles() -> None:
                     );
                 """)
 
-                inserted = 0
-
-                for record in records:
-                    cursor.execute(
-                        """
-                        INSERT INTO scrobbles (artist, track, album, timestamp)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (artist, track, timestamp) DO NOTHING
-                        """,
-                        record,
-                    )
-
-                    inserted += cursor.rowcount
-
-                skipped = len(records) - inserted
-                logger.info(
-                    "Inserted %d scrobbles, skipped %d duplicates.",
-                    inserted,
-                    skipped,
+                cursor.executemany(
+                    """
+                    INSERT INTO scrobbles (artist, track, album, timestamp)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (artist, track, timestamp) DO NOTHING
+                    """,
+                    records,
                 )
+
+                logger.info("Processed %d scrobbles.", len(records))
 
     except psycopg.Error:
         logger.exception("Database error while loading scrobbles")
