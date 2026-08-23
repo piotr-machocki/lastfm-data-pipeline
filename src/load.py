@@ -88,16 +88,38 @@ def load_scrobbles() -> None:
         ) as conn:
             with conn.cursor() as cursor:
 
-                cursor.executemany(
+                cursor.execute(
                     """
-                    INSERT INTO scrobbles (artist, track, album, timestamp)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (artist, track, timestamp) DO NOTHING
-                    """,
-                    records,
+                    CREATE TEMP TABLE staged_scrobbles (
+                        artist TEXT,
+                        track TEXT,
+                        album TEXT,
+                        timestamp TIMESTAMPTZ
+                    ) ON COMMIT DROP
+                    """
                 )
 
-                logger.info("Processed %d scrobbles.", len(records))
+                with cursor.copy(
+                    "COPY staged_scrobbles (artist, track, album, timestamp) FROM STDIN"
+                ) as copy:
+                    for record in records:
+                        copy.write_row(record)
+
+                cursor.execute(
+                    """
+                    INSERT INTO scrobbles (artist, track, album, timestamp)
+                    SELECT artist, track, album, timestamp FROM staged_scrobbles
+                    ON CONFLICT (artist, track, timestamp) DO NOTHING
+                    """
+                )
+
+                inserted = cursor.rowcount
+                skipped = len(records) - inserted
+
+                logger.info(
+                    "Processed %d scrobbles: %d inserted, %d duplicates skipped",
+                    len(records), inserted, skipped,
+                )
 
     except psycopg.Error:
         logger.exception("Database error while loading scrobbles")
