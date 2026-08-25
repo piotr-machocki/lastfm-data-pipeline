@@ -1,15 +1,48 @@
 from pathlib import Path
 
-SOURCE_DIR = Path("src")
+PROJECT_DIR = Path(".")
 OUTPUT_FILE = Path("all_code.txt")
+
+INCLUDED_DIRS = {
+    "src",
+    "tests",
+    "sql",
+}
+
+INCLUDED_ROOT_FILES = {
+    "README.md",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "pyproject.toml",
+}
+
+
+def should_include(file: Path, relative: Path) -> bool:
+    if len(relative.parts) == 1:
+        return relative.name in INCLUDED_ROOT_FILES
+
+    if relative.parts[0] not in INCLUDED_DIRS:
+        return False
+
+    if "__pycache__" in relative.parts:
+        return False
+
+    return file.suffix in {".py", ".sql"}
 
 
 with OUTPUT_FILE.open("w", encoding="utf-8") as output:
-    for file in sorted(SOURCE_DIR.iterdir()):
-        if file.is_file() and file.suffix == ".py":
-            output.write(f"\n{'=' * 60}\n")
-            output.write(f"# {file.name}\n")
-            output.write(f"{'=' * 60}\n\n")
+    for file in sorted(PROJECT_DIR.rglob("*")):
+        if not file.is_file():
+            continue
 
-            output.write(file.read_text(encoding="utf-8"))
-            output.write("\n\n")
+        relative_path = file.relative_to(PROJECT_DIR)
+
+        if not should_include(file, relative_path):
+            continue
+
+        output.write(f"\n{'=' * 60}\n")
+        output.write(f"# {relative_path}\n")
+        output.write(f"{'=' * 60}\n\n")
+
+        output.write(file.read_text(encoding="utf-8"))
+        output.write("\n\n")
