@@ -43,10 +43,7 @@ def fetch_scrobbles(since=None, full_history=False):
         if since is not None:
             params["from"] = since
 
-        api_sig = sign_request(
-            {key: value for key, value in params.items() if key != "format"},
-            API_SECRET,
-        )
+        api_sig = sign_request(params, API_SECRET)
         params["api_sig"] = api_sig
 
         try:
