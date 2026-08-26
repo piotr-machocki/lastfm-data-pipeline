@@ -46,7 +46,7 @@ src/
 └── pipeline.py        # Orchestrates all stages end-to-end
 
 sql/
-└── schema.sql        # `scrobbles` table definition
+└── schema.sql        # 'scrobbles' table definition
 
 data/
 ├── raw/            # Raw API responses (JSON)
