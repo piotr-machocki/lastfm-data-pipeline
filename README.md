@@ -98,7 +98,7 @@ DB_NAME=lastfm
 DB_USER=your_user
 DB_PASSWORD=your_password
 
-# Only needed for manual/local runs — Docker Compose overrides these
+# Only needed for manual/local runs - Docker Compose overrides these
 DB_HOST=localhost
 DB_PORT=5432
 ```
@@ -118,11 +118,11 @@ The session key is saved automatically to `.env` as `LASTFM_SESSION_KEY`.
 
 ---
 
-## Running with Docker
+## Docker
 
-**Requirements:** Docker Desktop installed and running.
+Requires **Docker Desktop** on macOS/Windows or **Docker Engine + the Docker Compose plugin** on Linux.
 
-Docker Compose runs the pipeline and PostgreSQL in separate containers.
+On macOS or Windows, install Docker Desktop from [docker.com](https://www.docker.com/products/docker-desktop/) and make sure it is running before continuing. Otherwise, `docker compose` commands will fail to connect to the Docker daemon.
 
 ### First run
 
@@ -199,12 +199,6 @@ docker compose run --rm pipeline python -m src.load
 pip install -r requirements.txt
 ```
 
-For development and testing:
-
-```bash
-pip install -r requirements-dev.txt
-```
-
 ### 2. Create the database
 
 Create a PostgreSQL database and apply the schema:
@@ -259,16 +253,21 @@ Valid rows proceed to the load stage.
 
 ## Testing
 
-Run the test suite with:
+For development and testing, install the dev dependencies:
+ 
+```bash
+pip install -r requirements-dev.txt
+```
 
+Run the test suite with verbose output:
+ 
 ```bash
 pytest -v
 ```
-
-The test suite currently covers:
-
-- Last.fm request signing
-- Data validation
+ 
+The `-v` flag displays each test individually with its result.
+ 
+The test suite covers request signing (`test_lastfm.py`) and data validation (`test_validate.py`).
 
 ## Status
 
