@@ -38,7 +38,7 @@ def transform_scrobbles():
         try:
             clean_track = {
                 "artist": track["artist"]["#text"],
-                "album": track["album"]["#text"],
+                "album": track.get("album", {}).get("#text"),
                 "track": track["name"],
                 "timestamp": datetime.fromtimestamp(
                     int(track["date"]["uts"]),
