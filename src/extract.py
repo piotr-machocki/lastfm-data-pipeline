@@ -91,7 +91,31 @@ def fetch_scrobbles(since=None, full_history=False):
 
 
 if __name__ == "__main__":
+    import argparse
     from src.config import setup_logging
+    from src.load import get_last_timestamp
+
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--incremental",
+        action="store_true",
+        help="Fetch scrobbles since the last timestamp stored in the database",
+    )
+    group.add_argument(
+        "--full-history",
+        action="store_true",
+        help="Fetch the complete scrobble history",
+    )
+
+    args = parser.parse_args()
+
     setup_logging()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    fetch_scrobbles()
+
+    since = get_last_timestamp() if args.incremental else None
+
+    fetch_scrobbles(
+        since=since,
+        full_history=args.full_history,
+    )
