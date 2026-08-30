@@ -14,16 +14,26 @@ INCLUDED_ROOT_FILES = {
     "requirements.txt",
     "requirements-dev.txt",
     "pyproject.toml",
+    ".dockerignore",
+    "Dockerfile",
+    "docker-compose.yml",
 }
 
 
 def should_include(file: Path, relative: Path) -> bool:
+    # Root-level files
     if len(relative.parts) == 1:
-        return relative.name in INCLUDED_ROOT_FILES
+        if relative.name in INCLUDED_ROOT_FILES:
+            return True
 
+        # Include every Python file in the root
+        return file.suffix == ".py"
+
+    # Files inside included directories
     if relative.parts[0] not in INCLUDED_DIRS:
         return False
 
+    # Ignore Python cache directories
     if "__pycache__" in relative.parts:
         return False
 
