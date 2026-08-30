@@ -42,6 +42,7 @@ Each run is incremental by default: it starts from the latest scrobble already s
 ```text
 .
 ├── Dockerfile              # Pipeline container definition
+├── docker-entrypoint.py    # Fixes ./data ownership, then drops root → appuser
 ├── docker-compose.yml      # PostgreSQL + pipeline services
 ├── .dockerignore           # Files excluded from Docker build context
 ├── requirements.in         # Direct Python dependencies
@@ -136,6 +137,10 @@ The PostgreSQL database is initialized automatically, and `sql/schema.sql` is ap
 
 The pipeline waits for PostgreSQL to become healthy before starting.
 
+### File ownership on Linux
+
+The pipeline container starts as `root`, fixes ownership of `/app/data` to match the bind-mounted `./data` directory, then drops privileges to `appuser` before running the actual command. This avoids UID-mismatch permission errors on Linux (where bind mounts preserve host UIDs) without affecting `docker compose run` overrides or signal handling. No action needed — this happens automatically on every run.
+
 ### Incremental runs
 
 Run the pipeline again to fetch new scrobbles:
@@ -181,7 +186,9 @@ The local `./data` directory is mounted into the pipeline container, so generate
 Individual stages can also be executed inside the pipeline container:
 
 ```bash
-docker compose run --rm pipeline python -m src.extract
+docker compose run --rm pipeline python -m src.extract                 # newest page only
+docker compose run --rm pipeline python -m src.extract --incremental   # fetch since last stored scrobble
+docker compose run --rm pipeline python -m src.extract --full-history  # fetch entire history
 docker compose run --rm pipeline python -m src.transform
 docker compose run --rm pipeline python -m src.validate
 docker compose run --rm pipeline python -m src.load
@@ -225,7 +232,9 @@ python -m src.pipeline --full-history
 ### Run individual stages
 
 ```bash
-python -m src.extract
+python -m src.extract                 # newest page only, no DB required
+python -m src.extract --incremental   # fetch since last stored scrobble (DB required)
+python -m src.extract --full-history  # fetch entire history
 python -m src.transform
 python -m src.validate
 python -m src.load
