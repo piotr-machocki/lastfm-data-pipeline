@@ -7,25 +7,8 @@ from src.config import SCROBBLES_JSON, SCROBBLES_CSV
 
 logger = logging.getLogger(__name__)
 
-def transform_scrobbles():
-    logger.info("Transforming scrobbles")
 
-    try:
-        with open(SCROBBLES_JSON, "r", encoding="utf-8") as file:
-            data = json.load(file)
-    except FileNotFoundError:
-        logger.error("Input file not found: %s", SCROBBLES_JSON)
-        raise SystemExit(1)
-    except json.JSONDecodeError as e:
-        logger.error("Malformed JSON in %s: %s", SCROBBLES_JSON, e)
-        raise SystemExit(1)
-
-    try:
-        tracks = data["recenttracks"]["track"]
-    except KeyError:
-        logger.error("%s is missing 'recenttracks.track'.", SCROBBLES_JSON)
-        raise SystemExit(1)
-
+def _clean_tracks(tracks):
     if isinstance(tracks, dict):
         tracks = [tracks]
 
@@ -50,6 +33,30 @@ def transform_scrobbles():
             continue
 
         clean_tracks.append(clean_track)
+
+    return clean_tracks
+
+
+def transform_scrobbles():
+    logger.info("Transforming scrobbles")
+
+    try:
+        with open(SCROBBLES_JSON, "r", encoding="utf-8") as file:
+            data = json.load(file)
+    except FileNotFoundError:
+        logger.error("Input file not found: %s", SCROBBLES_JSON)
+        raise SystemExit(1)
+    except json.JSONDecodeError as e:
+        logger.error("Malformed JSON in %s: %s", SCROBBLES_JSON, e)
+        raise SystemExit(1)
+
+    try:
+        tracks = data["recenttracks"]["track"]
+    except KeyError:
+        logger.error("%s is missing 'recenttracks.track'.", SCROBBLES_JSON)
+        raise SystemExit(1)
+
+    clean_tracks = _clean_tracks(tracks)
 
     df = pd.DataFrame(clean_tracks)
 
