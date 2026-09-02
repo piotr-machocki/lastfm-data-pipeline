@@ -70,12 +70,15 @@ Each run is incremental by default: it starts from the latest scrobble already s
 │
 └── tests/
     ├── test_lastfm.py      # Request-signing tests
-    └── test_validate.py    # Validation logic tests
+    ├── test_validate.py    # Validation logic tests
+    ├── test_transform.py   # Transform / cleaning logic tests
+    ├── test_extract.py     # Extract stage tests 
+    └── test_load.py        # Load stage tests
 ```
 
 ## Setup
 
-Both execution paths require a Last.fm API account and a `.env` file first. Then choose **Docker** or **Manual / local** execution.
+Both execution paths require a Last.fm API account and a configured .env file. Then choose **Docker** or **Manual / local** execution.
 
 ### 1. Create a Last.fm API account
 
@@ -139,7 +142,7 @@ The pipeline waits for PostgreSQL to become healthy before starting.
 
 ### File ownership on Linux
 
-The pipeline container starts as `root`, fixes ownership of `/app/data` to match the bind-mounted `./data` directory, then drops privileges to `appuser` before running the actual command. This avoids UID-mismatch permission errors on Linux (where bind mounts preserve host UIDs) without affecting `docker compose run` overrides or signal handling. No action needed — this happens automatically on every run.
+The pipeline container starts as root, fixes ownership of /app/data to match the bind-mounted ./data directory, then drops privileges to appuser before running the actual command. This avoids UID-mismatch permission errors on Linux, where bind mounts preserve host UIDs. No action is needed — this happens automatically on every run.
 
 ### Incremental runs
 
@@ -276,7 +279,7 @@ pytest -v
  
 The `-v` flag displays each test individually with its result.
  
-The test suite covers request signing (`test_lastfm.py`) and data validation (`test_validate.py`).
+The test suite covers request signing, transformation, validation, extraction, and loading.
 
 ## Status
 
@@ -292,14 +295,14 @@ Implemented:
 - Docker Compose orchestration
 - Database health checks
 - Structured logging
-- Automated tests
+- Automated tests for all pipeline stages
 - Pinned dependency management
 
 Planned next steps:
 
-- [ ] Additional test coverage for extract, transform, and load
 - [ ] SQL queries / views for analytics (top artists, tracks, listening trends)
 - [ ] Scheduling (cron / Airflow) for automated incremental runs
+- [ ] Retry/backoff for Last.fm HTTP calls (extract.py)
 
 ## License
 
