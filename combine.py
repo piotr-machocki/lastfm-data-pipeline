@@ -7,6 +7,7 @@ INCLUDED_DIRS = {
     "src",
     "tests",
     "sql",
+    "scripts",
 }
 
 INCLUDED_ROOT_FILES = {
@@ -37,7 +38,12 @@ def should_include(file: Path, relative: Path) -> bool:
     if "__pycache__" in relative.parts:
         return False
 
-    return file.suffix in {".py", ".sql"}
+    # Include EVERYTHING inside sql/ and scripts/
+    if relative.parts[0] in {"sql", "scripts"}:
+        return True
+
+    # src/ and tests/ only include Python files
+    return file.suffix == ".py"
 
 
 with OUTPUT_FILE.open("w", encoding="utf-8") as output:
