@@ -1,3 +1,5 @@
+SET client_min_messages = warning;
+
 CREATE TABLE IF NOT EXISTS scrobbles (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     artist TEXT NOT NULL,
