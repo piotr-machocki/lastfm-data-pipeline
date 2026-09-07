@@ -39,7 +39,7 @@ psql \
   -v ON_ERROR_STOP=1 \
   -f sql/02-schema.sql
 
-echo "Schema applied successfully."
+echo "Schema setup completed successfully."
 
 psql \
   -h "$DB_HOST" \
