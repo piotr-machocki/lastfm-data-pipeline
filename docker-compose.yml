@@ -17,6 +17,7 @@ services:
       retries: 10
 
   pipeline:
+    profiles: ["pipeline"]
     build: .
     depends_on:
       db:
