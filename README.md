@@ -2,7 +2,7 @@
 
 A small end-to-end ETL pipeline that pulls listening history (scrobbles) from the Last.fm API, cleans and validates it, and loads it into PostgreSQL.
 
-The pipeline is containerized with Docker Compose and designed for incremental ingestion, persistent storage, data quality, and analytics.
+The pipeline is containerized with Docker and orchestrated with Docker Compose, and is designed for incremental ingestion, persistent storage, data quality, and analytics.
 
 ## Overview
 
@@ -60,7 +60,14 @@ Each run is incremental by default: it starts from the latest scrobble already s
 │   └── pipeline.py         # Orchestrates all stages
 │
 ├── sql/
-│   └── schema.sql          # scrobbles table definition
+│   ├── 01-timezone.sh     # Sets the PostgreSQL database timezone on initialization
+│   ├── 02-schema.sql      # scrobbles table definition
+│   └── views.sql           # Analytics views (planned)
+│
+├── scripts/
+│   ├── docker-setup.sh     # Sets up Docker infrastructure
+│   ├── local-setup.sh      # Sets up PostgreSQL for local execution
+│   └── setup_timezone.py   # Detects/selects timezone and saves it to .env
 │
 ├── data/
 │   ├── raw/                # Raw API responses (JSON)
@@ -130,15 +137,21 @@ On macOS or Windows, install Docker Desktop from [docker.com](https://www.docker
 
 ### First run
 
-Build the pipeline image and start the services:
+Run the Docker setup script:
 
 ```bash
-docker compose up --build
+bash scripts/docker-setup.sh
 ```
 
-The PostgreSQL database is initialized automatically, and `sql/schema.sql` is applied when the database volume is created for the first time.
+The setup script:
 
-The pipeline waits for PostgreSQL to become healthy before starting.
+1. Detects your timezone or asks you to select one.
+2. Saves `DB_TIMEZONE` to `.env`.
+3. Builds the pipeline image.
+4. Starts PostgreSQL in the background.
+
+The pipeline is not run during setup.
+
 
 ### File ownership on Linux
 
@@ -146,10 +159,10 @@ The pipeline container starts as root, fixes ownership of /app/data to match the
 
 ### Incremental runs
 
-Run the pipeline again to fetch new scrobbles:
+Run the pipeline to fetch new scrobbles:
 
 ```bash
-docker compose up
+docker compose run --rm pipeline
 ```
 
 ### Full history
@@ -171,7 +184,7 @@ set -a; source .env; set +a
 Then:
 
 ```bash
-docker compose exec db psql -U ${DB_USER} -d lastfm -c "SELECT COUNT(*) FROM scrobbles;"
+docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT COUNT(*) FROM scrobbles;"
 ```
 
 ### Stop the services
@@ -209,13 +222,12 @@ docker compose run --rm pipeline python -m src.load
 pip install -r requirements.txt
 ```
 
-### 2. Create the database
+### 2. Set up PostgreSQL
 
-Create a PostgreSQL database and apply the schema:
+Run the local setup script:
 
 ```bash
-createdb lastfm
-psql -d lastfm -f sql/schema.sql
+bash scripts/local-setup.sh
 ```
 
 ### 3. Run the pipeline
@@ -283,26 +295,28 @@ The test suite covers request signing, transformation, validation, extraction, a
 
 ## Status
 
-🚧 **Work in progress** — the core ETL pipeline is functional and containerized with Docker Compose.
+### Implemented
 
-Implemented:
-
+- Last.fm API authentication
 - Incremental ingestion
 - Full-history ingestion
 - Data validation
 - Idempotent loading
 - PostgreSQL persistence
-- Docker Compose orchestration
+- Docker Compose setup
+- Separate Docker infrastructure setup and pipeline execution
+- PostgreSQL database timezone configuration
+- Automatic timezone detection and manual timezone selection
 - Database health checks
 - Structured logging
-- Automated tests for all pipeline stages
+- Automated tests for pipeline stages
 - Pinned dependency management
 
-Planned next steps:
+### Planned
 
-- [ ] SQL queries / views for analytics (top artists, tracks, listening trends)
-- [ ] Scheduling (cron / Airflow) for automated incremental runs
-- [ ] Retry/backoff for Last.fm HTTP calls (extract.py)
+- SQL analytics queries and views
+- Pipeline scheduling with cron/Airflow
+- More analytics and reporting
 
 ## License
 
