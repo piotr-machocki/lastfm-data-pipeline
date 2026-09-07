@@ -36,6 +36,7 @@ def _clean_tracks(tracks):
 
     return clean_tracks
 
+COLUMNS = ["artist", "album", "track", "timestamp"]
 
 def transform_scrobbles():
     logger.info("Transforming scrobbles")
@@ -58,7 +59,7 @@ def transform_scrobbles():
 
     clean_tracks = _clean_tracks(tracks)
 
-    df = pd.DataFrame(clean_tracks)
+    df = pd.DataFrame(clean_tracks, columns=COLUMNS)
 
     df.to_csv(
         SCROBBLES_CSV,
