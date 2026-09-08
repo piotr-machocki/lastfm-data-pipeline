@@ -140,7 +140,7 @@ On macOS or Windows, install Docker Desktop from [docker.com](https://www.docker
 Run the Docker setup script:
 
 ```bash
-bash scripts/docker-setup.sh
+./scripts/docker-setup.sh
 ```
 
 The setup script:
@@ -227,7 +227,7 @@ pip install -r requirements.txt
 Run the local setup script:
 
 ```bash
-bash scripts/local-setup.sh
+./scripts/local-setup.sh
 ```
 
 ### 3. Run the pipeline
