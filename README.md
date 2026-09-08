@@ -85,7 +85,7 @@ Each run is incremental by default: it starts from the latest scrobble already s
 
 ## Setup
 
-Both execution paths require a Last.fm API account and a configured .env file. Then choose **Docker** or **Manual / local** execution.
+Both execution paths require a Last.fm API account and a .env file with the required configuration. Then choose **Docker** or **Manual / local** execution.
 
 ### 1. Create a Last.fm API account
 
@@ -175,17 +175,19 @@ docker compose run --rm pipeline python -m src.pipeline --full-history
 
 ### Check the database
 
-`${DB_USER}` below is read from your shell environment, not from `.env` directly. Export it first (or source your `.env` file):
+#### View total number of scrobbles
 
 ```bash
-set -a; source .env; set +a
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT COUNT(*) FROM scrobbles;"'
 ```
 
-Then:
+#### Show the 50 most recent scrobbles
 
 ```bash
-docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT COUNT(*) FROM scrobbles;"
+docker compose exec db sh -c 'psql -P pager=off -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT artist, track, album, timestamp FROM scrobbles ORDER BY timestamp DESC LIMIT 50;"'
 ```
+
+The pager=off option prints all 50 rows directly in the terminal instead of opening a pager for scrolling through the output.
 
 ### Stop the services
 
