@@ -52,14 +52,13 @@ psql \
 
 echo "Database timezone configured: $DB_TIMEZONE"
 
-# TODO: once sql/views.sql is implemented:
-# psql \
-#   -h "$DB_HOST" \
-#   -p "$DB_PORT" \
-#   -U "$DB_USER" \
-#   -d "$DB_NAME" \
-#   -q \
-#   -v ON_ERROR_STOP=1 \
-#   -f sql/views.sql
-#
-# echo "Analytics views applied successfully."
+psql \
+  -h "$DB_HOST" \
+  -p "$DB_PORT" \
+  -U "$DB_USER" \
+  -d "$DB_NAME" \
+  -q \
+  -v ON_ERROR_STOP=1 \
+  -f sql/views.sql
+
+echo "Analytics views applied successfully."

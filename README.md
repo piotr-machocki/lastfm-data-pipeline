@@ -62,7 +62,7 @@ Each run is incremental by default: it starts from the latest scrobble already s
 ├── sql/
 │   ├── 01-timezone.sh     # Sets the PostgreSQL database timezone on initialization
 │   ├── 02-schema.sql      # scrobbles table definition
-│   └── views.sql           # Analytics views (planned)
+│   └── views.sql           # Analytics views (top artists, tracks, daily/hourly/monthly)
 │
 ├── scripts/
 │   ├── docker-setup.sh     # Sets up Docker infrastructure
@@ -103,6 +103,9 @@ LASTFM_USERNAME=your_lastfm_username
 
 # Filled in automatically after running the auth flow
 LASTFM_SESSION_KEY=
+
+# Filled in automatically by scripts/setup_timezone.py
+DB_TIMEZONE=
 
 # PostgreSQL connection
 DB_NAME=lastfm
@@ -148,7 +151,7 @@ The setup script:
 1. Detects your timezone or asks you to select one.
 2. Saves `DB_TIMEZONE` to `.env`.
 3. Builds the pipeline image.
-4. Starts PostgreSQL in the background.
+4. Starts PostgreSQL in the background and waits until it is healthy.
 
 The pipeline is not run during setup.
 
@@ -313,10 +316,10 @@ The test suite covers request signing, transformation, validation, extraction, a
 - Structured logging
 - Automated tests for pipeline stages
 - Pinned dependency management
+- SQL analytics views (top artists, top tracks, daily/hourly/monthly listening)
 
 ### Planned
 
-- SQL analytics queries and views
 - Pipeline scheduling with cron/Airflow
 - More analytics and reporting
 
