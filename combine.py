@@ -30,6 +30,10 @@ def should_include(file: Path, relative: Path) -> bool:
         # Include every Python file in the root
         return file.suffix == ".py"
 
+    # .github/workflows/ - include GitHub Actions workflows
+    if relative.parts[:2] == (".github", "workflows"):
+        return file.suffix in {".yml", ".yaml"}
+
     # Files inside included directories
     if relative.parts[0] not in INCLUDED_DIRS:
         return False
