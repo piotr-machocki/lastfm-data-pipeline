@@ -4,7 +4,6 @@ import json
 import logging
 from dotenv import load_dotenv
 from src.config import SCROBBLES_JSON, RAW_DIR
-from src.lastfm import sign_request
 
 
 logger = logging.getLogger(__name__)
@@ -12,19 +11,11 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 API_KEY = os.getenv("LASTFM_API_KEY")
-API_SECRET = os.getenv("LASTFM_API_SECRET")
 USERNAME = os.getenv("LASTFM_USERNAME")
-SESSION_KEY = os.getenv("LASTFM_SESSION_KEY")
 API_URL = "https://ws.audioscrobbler.com/2.0/"
 
-if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
-    if not all([API_KEY, API_SECRET, USERNAME, SESSION_KEY]):
-        logger.error(
-            "Missing required Last.fm environment variables. "
-            "Run auth.py first to create/update your .env file. "
-            "If you already ran auth.py, check that .env exists in the "
-            "project root and contains the required Last.fm variables."
-    )
+if not all([API_KEY, USERNAME]):
+    logger.error("Missing required Last.fm environment variables.")
     raise SystemExit(1)
 
 
@@ -40,7 +31,6 @@ def fetch_scrobbles(since=None, full_history=False):
             "method": "user.getrecenttracks",
             "user": USERNAME,
             "api_key": API_KEY,
-            "sk": SESSION_KEY,
             "format": "json",
             "limit": 200,
             "page": page,
@@ -48,9 +38,6 @@ def fetch_scrobbles(since=None, full_history=False):
 
         if since is not None:
             params["from"] = since
-
-        api_sig = sign_request(params, API_SECRET)
-        params["api_sig"] = api_sig
 
         try:
             response = requests.get(API_URL, params=params)
