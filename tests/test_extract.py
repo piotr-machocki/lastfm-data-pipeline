@@ -4,12 +4,10 @@ import os
 import pytest
 import requests
 
-# extract.py validates these env vars at import time and calls
-# SystemExit(1) if any are missing, so they must be set before import.
+# extract.py validates LASTFM_API_KEY and LASTFM_USERNAME at import time and
+# calls SystemExit(1) if either is missing, so they must be set before import.
 os.environ.setdefault("LASTFM_API_KEY", "test_api_key")
-os.environ.setdefault("LASTFM_API_SECRET", "test_api_secret")
 os.environ.setdefault("LASTFM_USERNAME", "test_user")
-os.environ.setdefault("LASTFM_SESSION_KEY", "test_session_key")
 
 from src import extract
 
