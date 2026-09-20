@@ -132,6 +132,7 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 ├── requirements.in                 # Direct Python dependencies
 ├── requirements.txt                # Pinned dependency lockfile
 ├── requirements-dev.txt            # Development and testing dependencies
+├── pyproject.toml                  # pytest configuration
 
 ├── src/
 │   ├── auth.py                     # Last.fm user authentication flow
@@ -318,7 +319,7 @@ The `user.getrecenttracks` endpoint used by this pipeline can be called without 
 
 A Last.fm API shared secret and `auth.py` are therefore not required for the normal public-history case.
 
-To obtain an API key, log in to your Last.fm account and [create a Last.fm API account]([https://www.last.fm/api/account/create]%28https://www.last.fm/api/account/create%29).
+To obtain an API key, log in to your Last.fm account and [create a Last.fm API account](https://www.last.fm/api/account/create).
 
 ### Private scrobble history
 
@@ -737,19 +738,21 @@ The workflow:
 
 1. Checks out the repository.
 
-2. Authenticates to Google Cloud using GitHub OIDC.
+2. Sets up Python 3.14.
 
-3. Uses Google Cloud Workload Identity Federation to impersonate the GitHub Actions service account.
+3. Authenticates to Google Cloud using GitHub OIDC.
 
-4. Starts an IAP tunnel to the PostgreSQL server.
+4. Uses Google Cloud Workload Identity Federation to impersonate the GitHub Actions service account.
 
-5. Installs the PostgreSQL client.
+5. Starts an IAP tunnel to the PostgreSQL server.
 
-6. Tests the database connection.
+6. Installs the PostgreSQL client.
 
-7. Installs Python dependencies.
+7. Tests the database connection.
 
-8. Runs the ETL pipeline against the PostgreSQL database running on the GCP VM.
+8. Installs Python dependencies.
+
+9. Runs the ETL pipeline against the PostgreSQL database running on the GCP VM.
 
 The Google Cloud service account does not require a stored private key. Authentication is handled through Workload Identity Federation.
 
@@ -837,6 +840,8 @@ data/quarantine/rejected_scrobbles.csv
 The file contains a `rejection_reason` column describing why each row was rejected.
 
 Only valid rows proceed to the load stage.
+
+> **Note:** The quarantine file is written to the pipeline's local `data/` directory. It persists on the host when running locally or with Docker (where `./data` is mounted into the container). In the GitHub Actions production workflow, the runner is ephemeral and the file is discarded when the job finishes; only the rejected-row count remains visible in that run's logs.
 
 ## Analytics
 
