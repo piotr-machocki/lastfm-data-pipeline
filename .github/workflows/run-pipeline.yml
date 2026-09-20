@@ -1,6 +1,9 @@
 name: Run Last.fm Pipeline
 
+
 on:
+  schedule:
+    - cron: "0 */12 * * *"
   workflow_dispatch:
 
 permissions:
