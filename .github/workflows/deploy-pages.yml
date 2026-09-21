@@ -1,0 +1,107 @@
+name: Prepare Pages Data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  prepare-pages-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/912694882726/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-actions@lastfm-data-platform.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Start IAP tunnel to PostgreSQL
+        run: |
+          gcloud compute start-iap-tunnel lastfm-server 5432 \
+            --local-host-port=127.0.0.1:5433 \
+            --zone=us-central1-a \
+            > iap-tunnel.log 2>&1 &
+
+          tunnel_pid=$!
+
+          for i in {1..30}; do
+            if (echo > /dev/tcp/127.0.0.1/5433) 2>/dev/null; then
+              echo "IAP tunnel is ready."
+              break
+            fi
+
+            if ! kill -0 "$tunnel_pid" 2>/dev/null; then
+              echo "IAP tunnel process exited unexpectedly."
+              cat iap-tunnel.log
+              exit 1
+            fi
+
+            echo "Waiting for IAP tunnel... ($i/30)"
+            sleep 1
+          done
+
+          if ! (echo > /dev/tcp/127.0.0.1/5433) 2>/dev/null; then
+            echo "IAP tunnel did not become ready within 30 seconds."
+            cat iap-tunnel.log
+            exit 1
+          fi
+
+      - name: Generate JSON data
+        env:
+          PGPASSWORD: ${{ secrets.PROFESSIONAL_DB_PASSWORD }}
+        run: |
+          mkdir -p data
+
+          export_json() {
+            local name="$1" query="$2"
+            psql -X -qAt \
+              -h 127.0.0.1 \
+              -p 5433 \
+              -U lastfm_professional_user \
+              -d lastfm_professional \
+              -v ON_ERROR_STOP=1 \
+              -c "SELECT COALESCE(json_agg(t), '[]'::json) FROM (${query}) t" \
+              > "data/${name}.json"
+          }
+
+          export_json top_artists "SELECT * FROM top_artists ORDER BY play_count DESC LIMIT 1000"
+          export_json top_tracks "SELECT * FROM top_tracks ORDER BY play_count DESC LIMIT 1000"
+          export_json daily_listening "SELECT * FROM daily_listening ORDER BY day"
+          export_json hourly_listening_pattern "SELECT * FROM hourly_listening_pattern ORDER BY hour_of_day"
+          export_json monthly_summary "SELECT * FROM monthly_summary ORDER BY month"
+
+      - name: Verify generated files
+        run: |
+          echo "Generated files:"
+          ls -lh data/
+
+          echo
+          echo "Validating JSON..."
+
+          for f in data/*.json; do
+            if python3 -m json.tool "$f" > /dev/null; then
+              echo "OK: $f"
+            else
+              echo "INVALID: $f"
+              exit 1
+            fi
+          done
+
+          echo
+          echo "Top artists:"
+          head -c 500 data/top_artists.json
+
+          echo
+          echo
+          echo "Top tracks:"
+          head -c 500 data/top_tracks.json
