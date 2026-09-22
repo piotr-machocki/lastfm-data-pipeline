@@ -6,6 +6,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  pages: write
 
 jobs:
   prepare-pages-data:
@@ -95,8 +96,6 @@ jobs:
 
       - name: Verify generated files
         run: |
-          echo "Generated files:"
-          ls -lh data/
 
           echo
           echo "Validating JSON..."
@@ -123,17 +122,20 @@ jobs:
               exit 1
             fi
           done
+          
+      - name: Prepare Pages site
+        run: |
+          mkdir -p site/data
+          cp data/*.json site/data/
 
-          echo
-          echo "Overview:"
-          cat data/overview.json
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-          echo
-          echo
-          echo "Top artists:"
-          head -c 500 data/top_artists.json
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
 
-          echo
-          echo
-          echo "Top tracks:"
-          head -c 500 data/top_tracks.json
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
