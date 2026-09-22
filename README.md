@@ -2,6 +2,8 @@
 
 A small end-to-end data engineering pipeline that extracts listening history (scrobbles) from the Last.fm API, transforms and validates the data, and loads the data into PostgreSQL.
 
+**[View the live dashboard](https://piotr-machocki.github.io/lastfm-data-pipeline/)**
+
 The project supports three deployment environments:
 
 * **Local PostgreSQL** - PostgreSQL runs directly on the host machine.
@@ -12,7 +14,7 @@ The project supports three deployment environments:
 
 The GCP deployment uses Workload Identity Federation (WIF) for GitHub Actions authentication and Identity-Aware Proxy (IAP) for secure VM access to PostgreSQL.
 
-The pipeline is designed for incremental ingestion, idempotent loading, data quality, persistent storage, and SQL-based analytics.
+The pipeline is designed for incremental ingestion, idempotent loading, data quality, persistent storage, SQL-based analytics, and automated dashboard deployment.
 
 ## Overview
 
@@ -76,7 +78,7 @@ SQL analytics views
                          │
                   OpenID Connect
                          ↓
-          Workload Identity Federation
+              Workload Identity Federation
                          │
                          ↓
                         IAP
@@ -117,14 +119,13 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 
 ```text
 .
-
 ├── .github/
 │   └── workflows/
 │       ├── test-gcp-auth.yml       # Tests GitHub → GCP authentication
 │       ├── test-gcp-vm.yml         # Tests VM access through IAP
 │       ├── test-postgres.yml       # Tests PostgreSQL connectivity
-│       └── run-pipeline.yml        # Runs the production ETL pipeline
-
+│       ├── run-pipeline.yml        # Runs the production ETL pipeline
+│       └── prepare-pages-data.yml  # Generates dashboard data and deploys GitHub Pages
 ├── Dockerfile                      # Pipeline container definition
 ├── docker-entrypoint.py            # Fixes data ownership, then drops privileges
 ├── docker-compose.yml              # Local PostgreSQL + pipeline services
@@ -133,7 +134,6 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 ├── requirements.txt                # Pinned dependency lockfile
 ├── requirements-dev.txt            # Development and testing dependencies
 ├── pyproject.toml                  # pytest configuration
-
 ├── src/
 │   ├── auth.py                     # Last.fm user authentication flow
 │   ├── config.py                   # Paths, directories, and logging configuration
@@ -143,31 +143,26 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 │   ├── validate.py                 # Cleaned CSV → valid / rejected CSVs
 │   ├── load.py                     # Valid CSV → PostgreSQL
 │   └── pipeline.py                 # Orchestrates all stages
-
 ├── sql/
 │   ├── 01-timezone.sh              # Database timezone configuration
 │   ├── 02-schema.sql               # scrobbles table definition
 │   └── views.sql                   # Analytics views
-
 ├── scripts/
 │   ├── local-setup.sh              # Sets up native/local PostgreSQL
 │   ├── local-docker-setup.sh       # Sets up Docker PostgreSQL
 │   ├── gcp-setup.sh                # Initializes an existing PostgreSQL database on the GCP VM
 │   └── setup_timezone.py           # Detects/selects timezone and saves it to .env
-
 ├── data/
 │   ├── raw/                        # Raw API responses
 │   ├── processed/                  # Transformed & validated CSVs
 │   ├── quarantine/                 # Rejected rows with reasons
 │   └── logs/                       # Pipeline run logs
-
 └── tests/
     ├── test_lastfm.py              # Request-signing tests
     ├── test_validate.py            # Validation tests
     ├── test_transform.py           # Transformation tests
     ├── test_extract.py             # Extraction tests
     └── test_load.py                # Loading tests
-
 ```
 
 ## Production Last.fm account
@@ -277,28 +272,43 @@ The mechanism is separate from the data pipeline itself:
 
 ```text
 GCP Billing
+
      │
+
      ↓
+
 Billing Budget
+
      │
+
      │ threshold reached
+
      ↓
+
 Pub/Sub
+
      │
+
      ↓
+
 Node.js billing-protection function
+
      │
+
      ↓
+
 Disable billing
+
      │
+
      ↓
+
 lastfm-data-platform
 ```
 
 The cost-protection mechanism is intended as a **safety net**, not as a guarantee that the project can never exceed 2 PLN. Cloud billing data and budget notifications are not necessarily instantaneous, so actual charges can exceed the configured threshold before the billing shutdown takes effect.
 
 The function and its configuration are maintained separately from the ETL pipeline code because they operate at the GCP project/billing level rather than being part of the pipeline execution path.
-
 
 ## Last.fm Data Access
 
@@ -429,7 +439,9 @@ For local development, create a `.env` file in the project root:
 # Last.fm API
 
 LASTFM_API_KEY=your_api_key
+
 LASTFM_API_SECRET=your_api_secret
+
 LASTFM_USERNAME=your_lastfm_username
 
 # Optional: only required when using authenticated Last.fm access
@@ -443,9 +455,13 @@ DB_TIMEZONE=
 # PostgreSQL
 
 DB_NAME=lastfm
+
 DB_USER=your_user
+
 DB_PASSWORD=your_password
+
 DB_HOST=localhost
+
 DB_PORT=5432
 ```
 
@@ -582,16 +598,27 @@ The architecture is:
 
 ```text
 GitHub Actions
+
       │
+
       │ OIDC / Workload Identity Federation
+
       ↓
+
 Google Cloud
+
       │
+
       │ IAP TCP tunnel
+
       ↓
+
 GCP VM
+
       │
+
       ↓
+
 PostgreSQL
 ```
 
@@ -710,17 +737,29 @@ The security chain is therefore:
 
 ```text
 IAP TCP forwarding
+
        ↓
+
 35.235.240.0/20
+
        ↓
+
 GCP firewall: TCP 5432
+
        ↓
+
 10.128.0.2:5432
+
        ↓
+
 PostgreSQL pg_hba.conf
+
        ↓
+
 SCRAM-SHA-256 authentication
+
        ↓
+
 PostgreSQL database
 ```
 
@@ -734,7 +773,7 @@ The workflow uses GitHub repository secrets and workflow environment variables.
 
 ### Authentication
 
-The workflow:
+The production pipeline workflow:
 
 1. Checks out the repository.
 
@@ -746,15 +785,28 @@ The workflow:
 
 5. Starts an IAP tunnel to the PostgreSQL server.
 
-6. Installs the PostgreSQL client.
+6. Installs the required dependencies.
 
-7. Tests the database connection.
-
-8. Installs Python dependencies.
-
-9. Runs the ETL pipeline against the PostgreSQL database running on the GCP VM.
+7. Runs the ETL pipeline against the PostgreSQL database running on the GCP VM.
 
 The Google Cloud service account does not require a stored private key. Authentication is handled through Workload Identity Federation.
+
+### Automated execution
+
+The production ETL pipeline runs automatically every 12 hours:
+
+* **00:00 UTC**
+* **12:00 UTC**
+
+The pipeline workflow can also be started manually through GitHub Actions.
+
+A separate Pages workflow runs automatically once per day:
+
+* **14:00 UTC**
+
+The Pages workflow queries the PostgreSQL analytics views, generates JSON datasets, and deploys the dashboard to GitHub Pages.
+
+The Pages workflow can also be started manually through GitHub Actions.
 
 ### Required GitHub Secrets
 
@@ -778,7 +830,13 @@ The pipeline can currently be started manually from:
 GitHub → Actions → Run Last.fm Pipeline → Run workflow
 ```
 
-The workflow uses the `lastfm_professional` PostgreSQL database running on the GCP VM and connects to it through an IAP tunnel.
+The Pages deployment can be started manually from:
+
+```text
+GitHub → Actions → Prepare Pages Data → Run workflow
+```
+
+The pipeline uses the `lastfm_professional` PostgreSQL database running on the GCP VM and connects to it through an IAP tunnel.
 
 ## Incremental Ingestion
 
@@ -847,15 +905,17 @@ Only valid rows proceed to the load stage.
 
 The PostgreSQL database contains SQL views for common listening-history analysis:
 
+* `overview`
+
 * `top_artists`
 
 * `top_tracks`
 
-* `daily_listening`
-
 * `hourly_listening_pattern`
 
 * `monthly_summary`
+
+* `yearly_summary`
 
 Example:
 
@@ -865,7 +925,31 @@ FROM top_artists
 LIMIT 10;
 ```
 
-These views operate directly on the PostgreSQL `scrobbles` table.
+These views operate directly on the PostgreSQL `scrobbles` table and provide the datasets used by the dashboard.
+
+## Dashboard
+
+The project includes a static dashboard published through GitHub Pages.
+
+**[View the live dashboard](https://piotr-machocki.github.io/lastfm-data-pipeline/)**
+
+The dashboard currently displays:
+
+* Total scrobbles
+* Unique artists
+* Most played artist
+* Most played track
+* Top artists
+* Top tracks
+* Yearly listening
+* Monthly listening
+* Listening by hour
+
+The dashboard is built with HTML, CSS, JavaScript, and Chart.js.
+
+The dashboard data is generated automatically from the PostgreSQL analytics views. The Pages workflow creates the JSON datasets on the GitHub Actions runner and includes them in the GitHub Pages deployment.
+
+Generated JSON files are not committed to the repository.
 
 ## Testing
 
@@ -915,6 +999,8 @@ The test suite covers request signing, extraction, transformation, validation, a
 
 * GitHub Actions pipeline execution
 
+* Scheduled GitHub Actions pipeline runs
+
 * GitHub OIDC authentication
 
 * Google Cloud Workload Identity Federation
@@ -929,13 +1015,19 @@ The test suite covers request signing, extraction, transformation, validation, a
 
 * SQL analytics views
 
+* Automated dashboard data generation
+
+* GitHub Pages dashboard
+
+* Chart.js data visualization
+
+* Scheduled daily dashboard deployment
+
 ### Planned
 
-* Scheduled GitHub Actions pipeline runs
+* Initial full-history ingestion of the complete production dataset
 
 * Additional analytics and reporting
-
-* Dashboard / data visualization
 
 * Further cloud infrastructure improvements
 
