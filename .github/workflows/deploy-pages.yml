@@ -64,6 +64,7 @@ jobs:
 
           export_json() {
             local name="$1" query="$2"
+
             psql -X -qAt \
               -h 127.0.0.1 \
               -p 5433 \
@@ -74,11 +75,23 @@ jobs:
               > "data/${name}.json"
           }
 
-          export_json top_artists "SELECT * FROM top_artists ORDER BY play_count DESC LIMIT 1000"
-          export_json top_tracks "SELECT * FROM top_tracks ORDER BY play_count DESC LIMIT 1000"
-          export_json daily_listening "SELECT * FROM daily_listening ORDER BY day"
-          export_json hourly_listening_pattern "SELECT * FROM hourly_listening_pattern ORDER BY hour_of_day"
-          export_json monthly_summary "SELECT * FROM monthly_summary ORDER BY month"
+          export_json overview \
+            "SELECT * FROM overview"
+
+          export_json top_artists \
+            "SELECT * FROM top_artists ORDER BY play_count DESC, artist"
+
+          export_json top_tracks \
+            "SELECT * FROM top_tracks ORDER BY play_count DESC, artist, track"
+
+          export_json yearly_summary \
+            "SELECT * FROM yearly_summary ORDER BY year"
+
+          export_json monthly_summary \
+            "SELECT * FROM monthly_summary ORDER BY month"
+
+          export_json hourly_listening_pattern \
+            "SELECT * FROM hourly_listening_pattern ORDER BY hour_of_day"
 
       - name: Verify generated files
         run: |
@@ -88,15 +101,34 @@ jobs:
           echo
           echo "Validating JSON..."
 
-          for f in data/*.json; do
-            if python3 -m json.tool "$f" > /dev/null; then
-              echo "OK: $f"
+          expected_files=(
+            "overview.json"
+            "top_artists.json"
+            "top_tracks.json"
+            "yearly_summary.json"
+            "monthly_summary.json"
+            "hourly_listening_pattern.json"
+          )
+
+          for file in "${expected_files[@]}"; do
+            if [ ! -f "data/$file" ]; then
+              echo "MISSING: data/$file"
+              exit 1
+            fi
+
+            if python3 -m json.tool "data/$file" > /dev/null; then
+              echo "OK: data/$file"
             else
-              echo "INVALID: $f"
+              echo "INVALID: data/$file"
               exit 1
             fi
           done
 
+          echo
+          echo "Overview:"
+          cat data/overview.json
+
+          echo
           echo
           echo "Top artists:"
           head -c 500 data/top_artists.json
