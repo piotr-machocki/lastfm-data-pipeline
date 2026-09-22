@@ -1,6 +1,8 @@
 name: Prepare Pages Data
 
 on:
+  schedule:
+    - cron: "0 14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -122,7 +124,7 @@ jobs:
               exit 1
             fi
           done
-          
+
       - name: Prepare Pages site
         run: |
           mkdir -p site/data
