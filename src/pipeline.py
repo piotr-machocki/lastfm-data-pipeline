@@ -25,9 +25,16 @@ def run_pipeline(full_history=False):
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     QUARANTINE_DIR.mkdir(parents=True, exist_ok=True)
 
+    if full_history:
+        logger.info("Running full-history streaming pipeline")
+        from src.fullhistory import run_full_history
+        run_full_history()
+        logger.info("Pipeline completed successfully.")
+        return
+
     logger.info("[1/4] Extracting...")
-    since = None if full_history else get_last_timestamp()
-    fetch_scrobbles(since=since, full_history=full_history)
+    since = get_last_timestamp()
+    fetch_scrobbles(since=since, full_history=False)
 
     logger.info("[2/4] Transforming...")
     transform_scrobbles()
