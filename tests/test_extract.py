@@ -4,8 +4,6 @@ import os
 import pytest
 import requests
 
-# extract.py validates LASTFM_API_KEY and LASTFM_USERNAME at import time and
-# calls SystemExit(1) if either is missing, so they must be set before import.
 os.environ.setdefault("LASTFM_API_KEY", "test_api_key")
 os.environ.setdefault("LASTFM_USERNAME", "test_user")
 
@@ -69,7 +67,7 @@ def test_default_mode_fetches_single_page_only(monkeypatch, redirect_output):
 def test_full_history_paginates_until_exhausted(monkeypatch, redirect_output):
     calls = []
 
-    def fake_get(url, params):
+    def fake_get(url, params, timeout=None):
         calls.append(params)
         page = params["page"]
         return make_response({
@@ -80,6 +78,7 @@ def test_full_history_paginates_until_exhausted(monkeypatch, redirect_output):
         })
 
     monkeypatch.setattr(extract.requests, "get", fake_get)
+    monkeypatch.setattr(extract.time, "sleep", lambda s: None)
 
     extract.fetch_scrobbles(since=None, full_history=True)
 
