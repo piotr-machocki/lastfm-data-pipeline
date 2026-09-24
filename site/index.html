@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 
 <html lang="en">
@@ -5,9 +6,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Last.fm Data Pipeline</title>
+    <title>Last.fm Data Pipeline</title>
 
-<link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 
 </head>
 
@@ -17,7 +18,7 @@
     <div class="container">
         <h1>Last.fm Data Pipeline</h1>
         <p>
-            Listening statistics generated from Last.fm scrobble data.
+            Data engineering pipeline and listening analytics powered by Last.fm data.
         </p>
     </div>
 </header>
@@ -100,19 +101,23 @@
 
 
     <section class="about">
-        <h2>About the Data</h2>
+        <h2>About the Project</h2>
 
         <p>
-            This dashboard is powered by an automated data engineering
-            pipeline that extracts listening data from the Last.fm API,
-            transforms and validates the data, and loads it into
-            PostgreSQL.
+            This project demonstrates an automated data engineering pipeline
+            for processing Last.fm scrobble data and generating listening
+            analytics.
         </p>
 
         <p>
-            The pipeline runs automatically using GitHub Actions.
-            PostgreSQL is hosted on Google Cloud and is accessed
-            securely through an Identity-Aware Proxy tunnel.
+            The pipeline extracts data from the Last.fm API, transforms and
+            validates the records, and loads them into PostgreSQL for
+            analysis.
+        </p>
+
+        <p>
+            GitHub Actions automates data ingestion and dashboard updates,
+            while the processed data is presented here through GitHub Pages.
         </p>
     </section>
 
@@ -122,7 +127,7 @@
 <footer class="site-footer">
     <div class="container">
         <p>
-            Last.fm Data Pipeline
+            Last.fm Data Pipeline · Data Engineering Project
         </p>
     </div>
 </footer>
@@ -133,3 +138,4 @@
 
 </body>
 </html>
+```
