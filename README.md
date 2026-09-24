@@ -7,14 +7,80 @@ A small end-to-end data engineering pipeline that extracts listening history (sc
 The project supports three deployment environments:
 
 * **Local PostgreSQL** - PostgreSQL runs directly on the host machine.
-
 * **Docker** - PostgreSQL and the pipeline run through Docker Compose.
-
 * **Google Cloud Platform** - PostgreSQL runs on a GCP VM and the production pipeline is executed by GitHub Actions.
 
 The GCP deployment uses Workload Identity Federation (WIF) for GitHub Actions authentication and Identity-Aware Proxy (IAP) for secure VM access to PostgreSQL.
 
 The pipeline is designed for incremental ingestion, idempotent loading, data quality, persistent storage, SQL-based analytics, and automated dashboard deployment.
+
+## Table of Contents
+
+* [Overview](#overview)
+* [Architecture](#architecture)
+
+  * [Local PostgreSQL / Docker](#local-postgresql--docker)
+  * [GCP / GitHub Actions](#gcp--github-actions)
+* [Tech Stack](#tech-stack)
+* [Project Structure](#project-structure)
+* [Production Last.fm account](#production-lastfm-account)
+* [Cloud Cost Design (GCP Always Free)](#cloud-cost-design-gcp-always-free)
+
+  * [Why IAP and no public IPv4](#why-iap-and-no-public-ipv4)
+  * [VM specification](#vm-specification)
+  * [Outbound traffic and the 1 GB limit](#outbound-traffic-and-the-1-gb-limit)
+  * [Package and OS updates](#package-and-os-updates)
+  * [Cost monitoring](#cost-monitoring)
+* [Last.fm Data Access](#lastfm-data-access)
+
+  * [Public scrobble history](#public-scrobble-history)
+  * [Private scrobble history](#private-scrobble-history)
+  * [Which configuration do I need?](#which-configuration-do-i-need)
+* [Choose Your Setup](#choose-your-setup)
+
+  * [Local PostgreSQL](#local-postgresql)
+  * [Docker](#docker)
+  * [GCP + GitHub Actions](#gcp--github-actions-1)
+* [Local PostgreSQL](#local-postgresql-1)
+
+  * [Requirements](#requirements)
+  * [Local `.env`](#local-env)
+  * [Setup](#setup)
+  * [Run the pipeline](#run-the-pipeline)
+* [Docker](#docker-1)
+
+  * [Setup](#setup-1)
+  * [Incremental run](#incremental-run)
+  * [Full-history run](#full-history-run)
+  * [Check the database](#check-the-database)
+  * [Stop the services](#stop-the-services)
+  * [Local PostgreSQL vs Docker](#local-postgresql-vs-docker)
+* [Google Cloud](#google-cloud)
+
+  * [GCP architecture](#gcp-architecture)
+  * [GCP database setup](#gcp-database-setup)
+  * [Verify the database](#verify-the-database)
+  * [Network and access](#network-and-access)
+  * [PostgreSQL access](#postgresql-access)
+* [GitHub Actions](#github-actions)
+
+  * [Authentication](#authentication)
+  * [Automated execution](#automated-execution)
+  * [Required GitHub Secrets](#required-github-secrets)
+  * [Manual workflow execution](#manual-workflow-execution)
+* [Incremental Ingestion](#incremental-ingestion)
+* [Full-history Ingestion](#full-history-ingestion)
+
+  * [Streaming and checkpointing](#streaming-and-checkpointing)
+* [Data Quality](#data-quality)
+* [Analytics](#analytics)
+* [Dashboard](#dashboard)
+* [Testing](#testing)
+* [Status](#status)
+
+  * [Implemented](#implemented)
+  * [Planned](#planned)
+* [License](#license)
 
 ## Overview
 
@@ -25,11 +91,8 @@ Extract → Transform → Validate → Load
 ```
 
 1. **Extract** - Pulls recent or full scrobble history from the Last.fm API and saves the raw response as JSON.
-
 2. **Transform** - Flattens and cleans the raw JSON into a tabular CSV.
-
 3. **Validate** - Checks each row for missing fields or invalid timestamps, splitting records into valid and rejected sets.
-
 4. **Load** - Loads valid scrobbles into PostgreSQL and skips duplicates.
 
 By default, the pipeline runs incrementally. It checks the latest timestamp already stored in PostgreSQL and requests newer scrobbles from Last.fm.
@@ -47,7 +110,6 @@ python -m src.pipeline --full-history
 The ETL pipeline is the same in both environments. The difference is where PostgreSQL runs:
 
 * **Local PostgreSQL:** PostgreSQL runs directly on the host machine.
-
 * **Docker:** PostgreSQL runs in the Docker Compose `db` container.
 
 ```text
@@ -76,7 +138,7 @@ SQL analytics views
                          │
                   GitHub Actions
                          │
-                  OpenID Connect
+                    OpenID Connect
                          ↓
               Workload Identity Federation
                          │
@@ -84,7 +146,7 @@ SQL analytics views
                         IAP
                          │
                          ↓
-                      GCP VM
+                     GCP VM
                          │
                          ↓
                     PostgreSQL
@@ -124,8 +186,9 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 │       ├── test-gcp-auth.yml       # Tests GitHub → GCP authentication
 │       ├── test-gcp-vm.yml         # Tests VM access through IAP
 │       ├── test-postgres.yml       # Tests PostgreSQL connectivity
-│       ├── run-pipeline.yml        # Runs the production ETL pipeline
-│       └── prepare-pages-data.yml  # Generates dashboard data and deploys GitHub Pages
+│       ├── run-pipeline.yml        # Runs the production ETL pipeline (incremental)
+│       ├── run-pipeline-bulk.yml   # Manual, one-time full-history backfill
+│       └── deploy-pages.yml        # Generates dashboard data and deploys GitHub Pages
 ├── Dockerfile                      # Pipeline container definition
 ├── docker-entrypoint.py            # Fixes data ownership, then drops privileges
 ├── docker-compose.yml              # Local PostgreSQL + pipeline services
@@ -142,16 +205,21 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
 │   ├── transform.py                # Raw JSON → cleaned CSV
 │   ├── validate.py                 # Cleaned CSV → valid / rejected CSVs
 │   ├── load.py                     # Valid CSV → PostgreSQL
+│   ├── fullhistory.py              # Streaming, checkpointed full-history backfill
 │   └── pipeline.py                 # Orchestrates all stages
 ├── sql/
 │   ├── 01-timezone.sh              # Database timezone configuration
-│   ├── 02-schema.sql               # scrobbles table definition
+│   ├── 02-schema.sql               # scrobbles table + fullhistory_checkpoint table
 │   └── views.sql                   # Analytics views
 ├── scripts/
 │   ├── local-setup.sh              # Sets up native/local PostgreSQL
 │   ├── local-docker-setup.sh       # Sets up Docker PostgreSQL
 │   ├── gcp-setup.sh                # Initializes an existing PostgreSQL database on the GCP VM
 │   └── setup_timezone.py           # Detects/selects timezone and saves it to .env
+├── site/
+│   ├── index.html                  # Dashboard markup
+│   ├── script.js                   # Fetches JSON data and renders Chart.js charts
+│   └── style.css                   # Dashboard styling
 ├── data/
 │   ├── raw/                        # Raw API responses
 │   ├── processed/                  # Transformed & validated CSVs
@@ -162,7 +230,8 @@ The PostgreSQL connection is established through an IAP tunnel, so the GCP VM do
     ├── test_validate.py            # Validation tests
     ├── test_transform.py           # Transformation tests
     ├── test_extract.py             # Extraction tests
-    └── test_load.py                # Loading tests
+    ├── test_load.py                # Loading tests
+    └── test_fullhistory.py         # Full-history checkpoint/resume tests
 ```
 
 ## Production Last.fm account
@@ -202,11 +271,8 @@ Instead of keeping a public IPv4 address attached to the VM, access is provided 
 This provides several benefits:
 
 * No permanent public IPv4 address
-
 * PostgreSQL is not exposed directly through a public IP address
-
 * GitHub Actions does not require a stored Google Cloud service-account key
-
 * Access is controlled through Google Cloud IAM and IAP
 
 ### VM specification
@@ -235,11 +301,8 @@ Google's current Compute Engine Always Free allowance includes up to 1 GB of out
 The expected workload is designed to keep network traffic small:
 
 * Normal incremental pipeline runs process only newly available Last.fm scrobbles.
-
 * The pipeline does not download the complete historical dataset on every run.
-
 * Analytics views automatically reflect new data because they query the current contents of the `scrobbles` table.
-
 * The initial full-history ingestion is a separate operation from normal incremental execution.
 
 The 1 GB limit should not be treated as an unlimited allowance. Actual usage should be monitored rather than assumed to be zero.
@@ -340,11 +403,8 @@ If an unauthenticated `user.getrecenttracks` request cannot access the required 
 This requires:
 
 * Last.fm API key
-
 * Last.fm API shared secret
-
 * Last.fm user authorization
-
 * A session key generated by the authentication flow
 
 The authentication flow is implemented in:
@@ -412,9 +472,7 @@ PostgreSQL runs on a GCP VM and the ETL pipeline is executed by GitHub Actions. 
 This setup additionally requires:
 
 * Running GCP VM instance
-
 * Configured Postgres on the VM
-
 * GitHub Actions secrets
 
 ## Local PostgreSQL
@@ -424,9 +482,7 @@ Use this setup when PostgreSQL is installed directly on the host machine.
 ### Requirements
 
 * Python 3.14+
-
 * PostgreSQL
-
 * Last.fm API key
 
 If authenticated Last.fm access is required, also configure the Last.fm shared secret and session key as described in [Last.fm Data Access](#lastfm-data-access).
@@ -439,9 +495,7 @@ For local development, create a `.env` file in the project root:
 # Last.fm API
 
 LASTFM_API_KEY=your_api_key
-
 LASTFM_API_SECRET=your_api_secret
-
 LASTFM_USERNAME=your_lastfm_username
 
 # Optional: only required when using authenticated Last.fm access
@@ -455,13 +509,9 @@ DB_TIMEZONE=
 # PostgreSQL
 
 DB_NAME=lastfm
-
 DB_USER=your_user
-
 DB_PASSWORD=your_password
-
 DB_HOST=localhost
-
 DB_PORT=5432
 ```
 
@@ -478,15 +528,10 @@ Run:
 The script:
 
 1. Detects or asks for the database timezone.
-
 2. Saves `DB_TIMEZONE` to `.env`.
-
 3. Creates the local database if necessary.
-
 4. Applies the PostgreSQL schema.
-
 5. Configures the database timezone.
-
 6. Applies the analytics views.
 
 ### Run the pipeline
@@ -520,15 +565,10 @@ Run:
 The setup script:
 
 1. Detects or asks for the database timezone.
-
 2. Saves `DB_TIMEZONE` to `.env`.
-
 3. Builds the pipeline image.
-
 4. Starts PostgreSQL.
-
 5. Waits for PostgreSQL to become healthy.
-
 6. Initializes the database schema and analytics views.
 
 The pipeline itself is not executed during setup.
@@ -651,13 +691,9 @@ Then run:
 The script:
 
 1. Detects or asks for the database timezone.
-
 2. Tests the PostgreSQL connection.
-
 3. Applies `sql/02-schema.sql`.
-
 4. Configures the database timezone.
-
 5. Applies `sql/views.sql`.
 
 The script does not create the GCP VM, install PostgreSQL, create the PostgreSQL database, or create the PostgreSQL role. Those resources are provisioned separately.
@@ -776,17 +812,11 @@ The workflow uses GitHub repository secrets and workflow environment variables.
 The production pipeline workflow:
 
 1. Checks out the repository.
-
 2. Sets up Python 3.14.
-
 3. Authenticates to Google Cloud using GitHub OIDC.
-
 4. Uses Google Cloud Workload Identity Federation to impersonate the GitHub Actions service account.
-
 5. Starts an IAP tunnel to the PostgreSQL server.
-
 6. Installs the required dependencies.
-
 7. Runs the ETL pipeline against the PostgreSQL database running on the GCP VM.
 
 The Google Cloud service account does not require a stored private key. Authentication is handled through Workload Identity Federation.
@@ -822,6 +852,8 @@ The production workflow currently uses the public `bbcradio1` Last.fm account, s
 
 The GitHub Actions workflow therefore does not need `LASTFM_API_SECRET` or `LASTFM_SESSION_KEY` for the current production data source.
 
+The one-time full-history backfill workflow (`run-pipeline-bulk.yml`) uses the same two secrets.
+
 ### Manual workflow execution
 
 The pipeline can currently be started manually from:
@@ -829,6 +861,14 @@ The pipeline can currently be started manually from:
 ```text
 GitHub → Actions → Run Last.fm Pipeline → Run workflow
 ```
+
+The one-time full-history backfill can be started manually from:
+
+```text
+GitHub → Actions → Run Last.fm Pipeline (Full History) → Run workflow
+```
+
+This workflow is for the initial full-history backfill only, not routine ingestion; regular scheduled runs stay on `run-pipeline.yml`. It runs on a 240-minute timeout to leave headroom for retries/backoff during a full backfill.
 
 The Pages deployment can be started manually from:
 
@@ -877,16 +917,25 @@ docker compose run --rm pipeline python -m src.pipeline --full-history
 
 Full-history ingestion is intended for initial population or rebuilding an archive. Regular runs should use the default incremental mode.
 
+### Streaming and checkpointing
+
+Full-history ingestion is implemented as a separate, streaming pipeline (`src/fullhistory.py`), not a larger version of the incremental path. It fetches, transforms, validates, and loads the scrobble history one Last.fm API page at a time, committing each page's data to PostgreSQL together with a checkpoint advance.
+
+This design is deliberate: real listening histories can span many thousands of pages, and holding the entire history in memory before a single load isn't necessary and doesn't recover cleanly from an interruption partway through.
+
+Progress is tracked in a single-row `fullhistory_checkpoint` table (`next_page`, `total_pages`). If a run is interrupted — a killed workflow timeout, a cancelled job, a dropped IAP tunnel — the next run reads that checkpoint and resumes from the next unfetched page instead of starting over, even from a completely different machine or process. The checkpoint row is cleared automatically once a run completes successfully.
+
+Because each page is fetched, validated, and loaded within its own committed unit, rejected rows on one page don't block the rest of the run, and a re-fetched page after a resume can't produce duplicate scrobbles: the same `artist + track + timestamp` uniqueness constraint used by incremental loads applies here too.
+
+In production, the full-history backfill is run manually via the `run-pipeline-bulk.yml` GitHub Actions workflow, separately from the scheduled incremental runs (see [Manual workflow execution](#manual-workflow-execution)).
+
 ## Data Quality
 
 The `validate` stage checks every row for:
 
 * Missing artist
-
 * Missing track
-
 * Invalid or unparseable timestamps
-
 * Future timestamps
 
 Rows that fail validation are written to:
@@ -906,15 +955,10 @@ Only valid rows proceed to the load stage.
 The PostgreSQL database contains SQL views for common listening-history analysis:
 
 * `overview`
-
 * `top_artists`
-
 * `top_tracks`
-
 * `hourly_listening_pattern`
-
 * `monthly_summary`
-
 * `yearly_summary`
 
 Example:
@@ -965,71 +1009,43 @@ Run the test suite:
 pytest -v
 ```
 
-The test suite covers request signing, extraction, transformation, validation, and loading.
+The test suite covers request signing, extraction, transformation, validation, loading, and the full-history checkpoint/resume behavior.
 
 ## Status
 
 ### Implemented
 
 * Last.fm API integration
-
 * Incremental ingestion
-
 * Full-history ingestion
-
+* Streaming, checkpointed full-history backfill with resume support
 * Data transformation
-
 * Data validation
-
 * Idempotent PostgreSQL loading
-
 * PostgreSQL persistence
-
 * PostgreSQL timezone configuration
-
 * Automatic/manual timezone selection
-
 * Docker Compose development environment
-
 * Local PostgreSQL setup
-
 * GCP PostgreSQL setup
-
 * Google Cloud IAP access
-
 * GitHub Actions pipeline execution
-
 * Scheduled GitHub Actions pipeline runs
-
 * GitHub OIDC authentication
-
 * Google Cloud Workload Identity Federation
-
 * Database health/connectivity checks
-
 * Structured logging
-
 * Automated tests
-
 * Pinned dependencies
-
 * SQL analytics views
-
 * Automated dashboard data generation
-
 * GitHub Pages dashboard
-
 * Chart.js data visualization
-
 * Scheduled daily dashboard deployment
 
 ### Planned
 
-* Initial full-history ingestion of the complete production dataset
-
 * Additional analytics and reporting
-
-* Further cloud infrastructure improvements
 
 ## License
 
